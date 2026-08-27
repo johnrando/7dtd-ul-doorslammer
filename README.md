@@ -26,6 +26,18 @@ slam it shut, repeat. Now the slam itself does a little work, and costs you a li
 Everything is a toggle, so status prints on each one — `ds` twice shows you where things stand
 and leaves the mod as it was.
 
+## Installing
+
+Copy `dist/DoorSlammer/` (checked into this repo, so no build needed) into the game's `Mods/`:
+
+```
+Mods/DoorSlammer/
+├── ModInfo.xml
+└── DoorSlammer.dll
+```
+
+Load order does not matter.
+
 ## Settings
 
 Defaults, all tunable in `Settings.cs`:
@@ -63,11 +75,6 @@ hatch 21,000 — so a fixed 10 HP per slam means very different things depending
 - **Doors opened by an electrical trigger are not covered**, only doors opened by hand.
 - **Dedicated-server clients get nothing.** Door activation is client-side, so slams only register
   in single-player or on a host.
-
-## Installing
-
-Copy `dist/DoorSlammer/` into the game's `Mods/` folder. `dist/` is committed so the mod installs
-without a toolchain.
 
 ## Building
 
