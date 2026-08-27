@@ -1,31 +1,21 @@
 # Door Slammer
 
-A 7 Days To Die mod. Closing a door on a zombie takes a little health off **both the zombie and
-the door** — 1 HP off the zombie, 10 HP off the door by default.
+A 7 Days To Die mod. Closing a door on a zombie takes health off **both the zombie and the door**
+— 1 HP off the zombie, 10 HP off the door by default.
 
-It exists to put a small price on a very safe tactic: trap a zombie behind a door, open it, land a
-hit, slam it shut, repeat. Now the slam itself does a bit of work, and costs you a bit of door.
+It puts a small price on a very safe tactic: trap a zombie behind a door, open it, land a hit,
+slam it shut, repeat. Now the slam itself does a little work, and costs you a little door.
 
-**Undead Legacy is not required.** The mod patches only vanilla methods, so it works on a
-plain install; it is simply also built to stay out of Undead Legacy's way (tested against 2.7.17).
-No Undead Legacy file is modified: the hooks are on vanilla methods that UL inherits.
+## What a slam does
 
-## What a slam does, and what it deliberately doesn't
+- Catches **at most one zombie** — the nearest one standing in the doorway.
+- Does **nothing else**: no knockdown, no stun, no knockback, no hit reaction. The damage is
+  credited to nobody, so it never sets the zombie on you and grants no XP.
+- **Never lands a killing blow.** Anything at or below the never-kill floor is left alone, so
+  slamming whittles a zombie down and then stops, and wears a door down but never breaks it open.
+- Costs nothing when no zombie is caught, so ordinary door use around your base is free.
 
-A slam catches **at most one zombie** — the nearest one standing in the doorway — and does nothing
-else. No knockdown, no stun, no knockback, no hit-reaction animation. The damage is credited to
-nobody, so it never sets the zombie on you and grants no XP.
-
-A slam **never lands a killing blow**. Anything at or below the never-kill floor (10 HP remaining
-by default) is left alone. So slamming whittles a zombie down and then stops — finishing it takes
-a real hit — and it can wear a door down but never break it open.
-
-If no zombie is caught, nothing is damaged. Ordinary door use around your base costs you nothing.
-
-## Console command
-
-`ds` toggles the mod. Every toggle prints the full status block, which is where the counters
-live — so `ds` twice shows you status and leaves the mod as it was:
+## Console commands
 
 | Command | Effect |
 |---|---|
@@ -33,24 +23,12 @@ live — so `ds` twice shows you status and leaves the mod as it was:
 | `ds rage` | toggle rage suppression, **off** by default |
 | `ds reset` | zero the counters |
 
-The line to watch is **`door closes checked`**. The startup log only proves the hook was
-installed; that number proves door closes are reaching it. If it climbs but `caught a zombie`
-stays at zero, the zombie isn't being seen as inside the doorway.
-
-### `ds rage`
-
-Undead Legacy rolls a rage chance on *every* damage response, scaled by how hard the hit was. A
-1 HP slam is only about 0.63% at UL's default setting — but spread over the many slams it takes to
-whittle a zombie down, that adds up to better than a coin flip, and super rage brings an alert
-scream with it.
-
-`ds rage` suppresses that roll **for slam damage only**; ordinary combat is untouched. It is
-**off by default**, because staying out of UL's way is the safer default. Without UL, the same
-toggle suppresses vanilla's own rage roll.
+Everything is a toggle, so status prints on each one — `ds` twice shows you where things stand
+and leaves the mod as it was.
 
 ## Settings
 
-Defaults, all live-tunable in `Settings.cs`:
+Defaults, all tunable in `Settings.cs`:
 
 | Setting | Default |
 |---|---|
@@ -60,33 +38,47 @@ Defaults, all live-tunable in `Settings.cs`:
 | cooldown per door | 0.5 s |
 | reach past the door frame | 0.35 m |
 
-The cooldown is what stops a held or macro'd activate key from grinding damage out frame by frame.
+The cooldown stops a held or macro'd activate key from grinding out damage frame by frame.
 
-## Known limitations
+## Undead Legacy compatibility
 
-- **Undead Legacy powered doors are not covered.** UL's `BlockULM_PoweredDoor` extends
-  `BlockULM_Powered` rather than `BlockDoor` and uses a different open/closed encoding. No player
-  is hand-slamming a powered vault door anyway.
-- **Electrically triggered doors are not covered.** Those toggle through `OnTriggered`, which
-  bypasses the method this mod hooks.
-- **Dedicated-server clients get nothing.** The door-activation path is client-side, so the hook
-  only runs in single-player or on a host. `ServerAuthoritative.cs` documents the server path in
-  full but is not wired up.
-- Undead Legacy door HP varies enormously — a bathroom stall is 50, a standard wooden door 250, a
-  vault hatch 21,000 — so a flat 1 HP means very different things depending on the door.
+**Undead Legacy is not required** — the mod works fine on a plain install. It is built to sit
+alongside UL without modifying anything of UL's, and is tested against **UL 2.7.17**. All of UL's
+ordinary doors are covered.
+
+**`ds rage`.** UL rolls a chance to enrage a zombie on every bit of damage it takes, however
+small. One slam is only around 0.63% at UL's default setting, but across the many slams it takes
+to whittle a zombie down that adds up to better than a coin flip — and a super rage brings an
+alert scream with it. `ds rage` suppresses that roll for slam damage only, leaving ordinary combat
+alone. Off by default. Without UL installed, the same toggle suppresses vanilla's own rage roll.
+
+**UL powered doors are not covered** — powered vault doors, garage doors and the like. Nobody is
+hand-slamming those anyway.
+
+**UL door HP varies enormously** — a bathroom stall is 50, a standard wooden door 250, a vault
+hatch 21,000 — so a fixed 10 HP per slam means very different things depending on the door.
+
+## Limitations
+
+- **Doors opened by an electrical trigger are not covered**, only doors opened by hand.
+- **Dedicated-server clients get nothing.** Door activation is client-side, so slams only register
+  in single-player or on a host.
+
+## Installing
+
+Copy `dist/DoorSlammer/` into the game's `Mods/` folder. `dist/` is committed so the mod installs
+without a toolchain.
 
 ## Building
 
-Requires the .NET SDK. The mod is built in place inside the game install and compiles against the
-game's own assemblies; there are no NuGet dependencies.
+Requires the .NET SDK; there are no NuGet dependencies. The mod builds in place inside the game
+install, against the game's own assemblies.
 
 ```
 dotnet build src/DoorSlammer/DoorSlammer.csproj -c Release
 ```
 
-That stages a ready-to-copy mod folder at `dist/DoorSlammer/`. Install it by copying that folder
-into the game's `Mods/` directory. `dist/` is committed so the mod can be installed without a
-toolchain; rebuild before committing so it matches `src/`.
+That restages `dist/DoorSlammer/`. Rebuild before committing so `dist/` matches `src/`.
 
 ## License
 
