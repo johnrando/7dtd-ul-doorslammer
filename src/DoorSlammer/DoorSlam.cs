@@ -151,6 +151,10 @@ namespace DoorSlammer
 				_entityIdThatDamaged: -1, _attackHitInfo: null, _bUseHarvestTool: false,
 				_bBypassMaxDamage: false);
 			Counters.DoorsDamaged++;
+
+			// Only once the door has really taken HP, so a slam that is spared by the floor or by
+			// the trader-area check stays as silent as it is harmless.
+			SlamSound.Play(_parentPos, block);
 		}
 	}
 }

@@ -17,6 +17,12 @@ namespace DoorSlammer
 		/// </summary>
 		internal static bool SuppressRage;
 
+		/// <summary>
+		/// Which of the game's own sounds a damaging slam plays on the door. Cycled with
+		/// <c>ds sound</c>; see <see cref="SlamSound"/> for where each name comes from.
+		/// </summary>
+		internal static SlamSoundMode SoundMode = SlamSoundMode.Impact;
+
 		/// <summary>HP the slam takes off the zombie.</summary>
 		internal static int DamageToZombie = 1;
 

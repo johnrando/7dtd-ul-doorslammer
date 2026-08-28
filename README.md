@@ -14,17 +14,21 @@ slam it shut, repeat. Now the slam itself does a little work, and costs you a li
 - **Never lands a killing blow.** Anything at or below the never-kill floor is left alone, so
   slamming whittles a zombie down and then stops, and wears a door down but never breaks it open.
 - Costs nothing when no zombie is caught, so ordinary door use around your base is free.
+- **Makes a sound**, picked automatically from the door's own material, and one the AI cannot
+  hear. See below.
 
 ## Console commands
 
 | Command | Effect |
 |---|---|
-| `ds` or `doorslammer` | toggle the mod, and print status + counters |
+| `ds` or `doorslammer` | toggle the mod, and print the settings |
+| `ds sound` | cycle the slam sound: impact → break → off. **Impact** by default |
 | `ds rage` | toggle rage suppression, **off** by default |
+| `ds info` | print the patch state and the counters |
 | `ds reset` | zero the counters |
 
-Everything is a toggle, so status prints on each one — `ds` twice shows you where things stand
-and leaves the mod as it was.
+Everything is a toggle or a cycle, so each one reports the state it left behind — `ds` twice
+shows you where things stand and leaves the mod as it was.
 
 ## Installing
 
@@ -44,6 +48,7 @@ Defaults, all tunable in `Settings.cs`:
 
 | Setting | Default |
 |---|---|
+| slam sound | impact |
 | damage to the zombie | 1 HP |
 | damage to the door | 10 HP |
 | never-kill floor | 10 HP remaining |
@@ -51,6 +56,37 @@ Defaults, all tunable in `Settings.cs`:
 | reach past the door frame | 0.35 m |
 
 The cooldown stops a held or macro'd activate key from grinding out damage frame by frame.
+
+## The slam sound
+
+A damaging slam plays a sound on the door — only when HP actually came off, so a slam spared by
+the never-kill floor or by the trader-area check is as silent as it is harmless.
+
+Nothing is bundled. Both modes name a sound the game already ships and already plays on that exact
+door, keyed on the door's own `SurfaceCategory` — `wood`, `metal`, `stone`, `glass`, `cloth`,
+`earth`, `organic`, `plant`. So every door type sounds like itself, a modded door the mod has never
+seen still gets the right sound, and one whose material has none gets silence rather than a wrong
+one.
+
+| Mode | Sound | Where it comes from |
+|---|---|---|
+| **impact** | `organichit<material>` — `organichitwood`, `organichitmetal`, … | `ItemActionAttack.Hit` composes a block-hit sound as `{attackerMadeOf}hit{surface}`, and zombie hands are `Material Morganic`. This is literally the sound of a zombie punching that door. |
+| **break** | the door's own `DestroyFX` sound if it names one, else `<material>destroy` | What `Block.SpawnDestroyFX` plays when that door is destroyed. Also its downgrade sound: `SpawnDowngradeFX` falls through to the same call, and no vanilla or UL door sets `DowngradeFX`. |
+
+Impact is the default because it is authored for repetition — three clips, pitch variation — and
+reads as "a body hit the door". Break is the bigger, splintering one-shot, which on every slam can
+read as "the door just broke", something the never-kill floor guarantees has not happened.
+
+**Neither is audible to zombies.** The sound goes out through `Audio.Manager.BroadcastPlay(pos,
+name)`, which leaves the entity id at `-1`; `Manager.Play` only signals the AI when it is handed an
+`EntityPlayer`. So there is no AI noise and no screamer heat — which the break sounds carry in
+quantity (`metaldestroy` is `noise="20" heat_map_strength="1.42"`). Vanilla's own door open/close
+sounds do signal the AI; a slam deliberately does not, in keeping with the rest of what a slam does
+not do.
+
+`ds info` reports the last sound name a slam resolved to. That is worth having because
+an unknown name fails silently by design — `Manager.Play` returns at its lookup, with no log line —
+which is exactly what makes guessing a name off a material safe.
 
 ## Undead Legacy compatibility
 
