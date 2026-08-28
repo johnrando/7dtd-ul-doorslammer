@@ -27,7 +27,7 @@ slam it shut, repeat. Now the slam itself does a little work, and costs you a li
 | `ds dmg {z} {d}` | set the damage to the zombie and to the door |
 | `ds floor {hp}` | set the never-kill floor |
 | `ds tuning {cd} {dist}` | set the per-door cooldown in seconds, and the reach past the frame in metres |
-| `ds info` | print the patch state and the counters |
+| `ds info` | print the same block, with the patch state and the counters added |
 | `ds reset` | zero the counters |
 
 Every command reports the state it left behind, and the settings block doubles as the menu: each

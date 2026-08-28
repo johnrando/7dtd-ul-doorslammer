@@ -74,36 +74,56 @@ namespace DoorSlammer
 			}
 		}
 
-		private static void OutputStatus()
+		/// <summary>
+		/// The menu. <paramref name="_header"/> differs because <c>ds</c> has just changed
+		/// something and <c>ds info</c> has not.
+		/// </summary>
+		private static void OutputMenu(string _header)
 		{
-			Output("Door Slammer is now " + (Settings.Enabled ? "ON" : "OFF"));
-			Output("  ds sound              : " + SoundChoices());
-			Output("  ds rage               : " + RageChoices());
-			Output("  ds dmg {z} {d}        : " + DamageLine());
-			Output("  ds floor {hp}         : " + FloorLine());
-			Output("  ds tuning {cd} {dist} : " + TuningLine());
+			Output(_header);
+			Line("ds sound", SoundChoices());
+			Line("ds rage", RageChoices());
+			Line("ds dmg {z} {d}", DamageLine());
+			Line("ds floor {hp}", FloorLine());
+			Line("ds tuning {cd} {dist}", TuningLine());
 		}
 
+		private static void OutputStatus()
+		{
+			OutputMenu("Door Slammer is now " + (Settings.Enabled ? "ON" : "OFF"));
+		}
+
+		/// <summary>The menu, with the read-only lines appended in the same column.</summary>
 		private static void OutputInfo()
 		{
-			Output("Door Slammer info");
-			Output("  Undead Legacy          : " + UndeadLegacyInfo.Status);
-			Output("  door-close hook        : " + Patches.DoorCloseHookStatus);
-			Output("  rage suppression patch : " + Patches.RageSuppressionStatus);
-			Output("  last slam sound        : " + SlamSound.LastPlayed);
-			Output("  door closes checked    : " + Counters.ClosesChecked
+			OutputMenu("Door Slammer is " + (Settings.Enabled ? "ON" : "OFF"));
+			Line("Undead Legacy", UndeadLegacyInfo.Status);
+			Line("door-close hook", Patches.DoorCloseHookStatus);
+			Line("rage roll patch", Patches.RageSuppressionStatus);
+			Line("last slam sound", SlamSound.LastPlayed);
+			Line("door closes checked", Counters.ClosesChecked
 				+ " (" + Counters.Slams + " caught a zombie)");
-			Output("  zombies                : " + Counters.ZombiesHit + " hit, "
+			Line("zombies", Counters.ZombiesHit + " hit, "
 				+ Counters.ZombiesSpared + " spared by the floor");
-			Output("  doors                  : " + Counters.DoorsDamaged + " damaged, "
+			Line("doors", Counters.DoorsDamaged + " damaged, "
 				+ Counters.DoorsSpared + " spared");
-			Output("  rage rolls suppressed  : " + Counters.RageSuppressed);
+			Line("rage rolls suppressed", Counters.RageSuppressed.ToString());
 
 			if (Counters.ClosesChecked == 0)
 			{
 				Output("Note: no door close has reached the hook yet. Closing any door by hand should");
 				Output("move that number - if it stays at zero, the hook is not live.");
 			}
+		}
+
+		/// <summary>
+		/// One line of the block. Every label is padded to the width of the longest one -
+		/// "ds tuning {cd} {dist}" - so the settings and the read-only lines share a column and
+		/// <c>ds info</c> reads as one block rather than two.
+		/// </summary>
+		private static void Line(string _label, string _value)
+		{
+			Output("  " + _label.PadRight(22) + ": " + _value);
 		}
 
 		private static void SetDamage(List<string> _params)
@@ -282,8 +302,8 @@ namespace DoorSlammer
 				+ "counts as standing in the doorway, in metres: 1 and 0.35 by default. The cooldown "
 				+ "is what stops a held or macro'd activate key grinding out damage frame by frame."
 				+ "\r\n\r\nThe three setters take effect immediately and last until the game is "
-				+ "restarted; the defaults live in Settings.cs.\r\n\r\n'ds info' prints the patch "
-				+ "state and the counters. The key line is 'door closes checked': the startup log "
+				+ "restarted; the defaults live in Settings.cs.\r\n\r\n'ds info' prints the same block with the "
+				+ "patch state and the counters added. The key line is 'door closes checked': the startup log "
 				+ "only proves the hook was installed, that number proves door closes are reaching "
 				+ "it. If it climbs but 'caught a zombie' does not, the zombie is not being seen as "
 				+ "inside the doorway.\r\n\r\n'ds reset' zeroes the counters "
