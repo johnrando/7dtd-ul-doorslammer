@@ -24,11 +24,27 @@ slam it shut, repeat. Now the slam itself does a little work, and costs you a li
 | `ds` or `doorslammer` | toggle the mod, and print the settings |
 | `ds sound` | cycle the slam sound: impact → break → off. **Impact** by default |
 | `ds rage` | toggle rage suppression, **off** by default |
+| `ds dmg {z} {d}` | set the damage to the zombie and to the door |
+| `ds floor {hp}` | set the never-kill floor |
+| `ds tuning {cd} {dist}` | set the per-door cooldown in seconds, and the reach past the frame in metres |
 | `ds info` | print the patch state and the counters |
 | `ds reset` | zero the counters |
 
-Everything is a toggle or a cycle, so each one reports the state it left behind — `ds` twice
-shows you where things stand and leaves the mod as it was.
+Every command reports the state it left behind, and the settings block doubles as the menu: each
+line names the command that changes it, and the two toggles list their choices with the live one
+marked. So `ds` twice shows you where things stand and leaves the mod as it was.
+
+```
+Door Slammer is now ON
+  ds sound              : [ off | >impact< | break ]
+  ds rage               : [ >off< | on ]
+  ds dmg {z} {d}        : 1 to zombie / 10 to door
+  ds floor {hp}         : will not cause damage below 10 health
+  ds tuning {cd} {dist} : 1 sec cooldown / 0.35 range
+```
+
+A setter takes effect immediately and lasts until the game is restarted; the defaults live in
+`Settings.cs`. Called with no arguments it prints its usage and the current value.
 
 ## Installing
 
@@ -44,7 +60,8 @@ Load order does not matter.
 
 ## Settings
 
-Defaults, all tunable in `Settings.cs`:
+Defaults. All of them are tunable in `Settings.cs`, and all but the sound are also settable
+in-game from the commands above:
 
 | Setting | Default |
 |---|---|
@@ -52,7 +69,7 @@ Defaults, all tunable in `Settings.cs`:
 | damage to the zombie | 1 HP |
 | damage to the door | 10 HP |
 | never-kill floor | 10 HP remaining |
-| cooldown per door | 0.5 s |
+| cooldown per door | 1 s |
 | reach past the door frame | 0.35 m |
 
 The cooldown stops a held or macro'd activate key from grinding out damage frame by frame.

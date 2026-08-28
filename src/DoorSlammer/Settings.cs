@@ -39,7 +39,7 @@ namespace DoorSlammer
 		/// Minimum seconds between two damaging slams of the same door. Stops a held or macro'd
 		/// activate key from turning into a damage-per-frame grinder.
 		/// </summary>
-		internal static float CooldownSeconds = 0.5f;
+		internal static float CooldownSeconds = 1f;
 
 		/// <summary>
 		/// How far outside the door's own block column a zombie still counts as "in the doorway",
