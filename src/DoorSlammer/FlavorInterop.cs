@@ -4,7 +4,7 @@ namespace DoorSlammer
 	/// The one thing this mod exposes to another, and it exists only so the <c>flavor</c> switch
 	/// does not have to be set twice.
 	///
-	/// PUBLISHED CONTRACT. Fletch Wounds binds <see cref="SetFlavor"/> by reflection, exactly as
+	/// PUBLISHED CONTRACT. FletchWounds binds <see cref="SetFlavor"/> by reflection, exactly as
 	/// <see cref="FletchWoundsBridge"/> binds its <c>TryProc</c> - neither mod can reference the
 	/// other, so this signature is the whole interface. Changing it does not break the build; it
 	/// silently unlinks the two switches, leaving them independent rather than broken.

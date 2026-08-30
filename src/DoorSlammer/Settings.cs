@@ -30,8 +30,11 @@ namespace DoorSlammer
 		internal static int DamageToDoor = 10;
 
 		/// <summary>
-		/// A slam never damages a target at or below this many HP remaining, so it can never land
-		/// a killing blow on a zombie or break a door open. Applied to each target independently.
+		/// A slam never takes a target below this many HP remaining. It is a cap on the hit, not a
+		/// gate in front of it: a target at or below the floor is left alone, and one above it
+		/// takes at most the health it has to spare. So a slam can never land a killing blow on a
+		/// zombie or break a door open however large <see cref="DamageToZombie"/> and
+		/// <see cref="DamageToDoor"/> get. Applied to each target independently.
 		/// </summary>
 		internal static int MinRemainingHp = 10;
 
@@ -50,7 +53,7 @@ namespace DoorSlammer
 		/// <summary>
 		/// Whether to take part in the extra behaviour other supported mods offer. On by default: it
 		/// does nothing at all unless one of them is installed, and the interaction it enables is one
-		/// the player has to set up on purpose. Currently just Fletch Wounds - see
+		/// the player has to set up on purpose. Currently just FletchWounds - see
 		/// <see cref="FletchWoundsBridge"/>. Both mods carry this switch and both have to be on.
 		/// </summary>
 		internal static bool Flavor = true;

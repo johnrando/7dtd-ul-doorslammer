@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -12,7 +13,7 @@ namespace DoorSlammer
 	/// server-authoritative trigger in <see cref="ServerAuthoritative"/> can reuse it unchanged.
 	///
 	/// That includes the one thing a slam does not do by itself: <see cref="FletchWoundsBridge"/>
-	/// hands the caught zombie to Fletch Wounds, if it is installed, so an arrow already stuck in
+	/// hands the caught zombie to FletchWounds, if it is installed, so an arrow already stuck in
 	/// that zombie gets driven deeper too.
 	/// </summary>
 	internal static class DoorSlam
@@ -37,9 +38,10 @@ namespace DoorSlammer
 			DamageZombie(zombie, _parentPos);
 
 			// Outside DamageZombie rather than inside it, and that is the decision: DamageZombie
-			// early-returns at the never-kill floor, and an arrow is allowed past it. The floor is a
+			// caps itself at the never-kill floor, and an arrow is allowed past it. The floor is a
 			// rule about what a door may do, not about what your own ammunition may do once the door
-			// drives it deeper. Inert unless Fletch Wounds is installed.
+			// drives it deeper. So this is the one part of a slam that can land a killing blow, and
+			// the only way a zombie ever dies to one. Inert unless FletchWounds is installed.
 			FletchWoundsBridge.TryProc(_world, zombie);
 
 			DamageDoor(_world, _clrIdx, _parentPos);
@@ -92,10 +94,18 @@ namespace DoorSlammer
 
 		private static void DamageZombie(EntityAlive _zombie, Vector3i _parentPos)
 		{
-			if (_zombie.Health <= Settings.MinRemainingHp)
+			// The never-kill floor, applied as a cap on the hit rather than as a gate in front of
+			// it. As a gate it only held while the damage was no larger than the floor: 'ds dmg 100'
+			// against 'ds floor 10' let anything above 10 HP take the whole 100 and die, which is
+			// the one thing the floor is named for stopping. Capping to the headroom instead makes
+			// it mean what it says at any 'ds dmg' - the zombie lands on the floor rather than
+			// through it, and the next slam finds nothing left to take.
+			//
+			// A slam whittles a zombie down and then stops; finishing it takes a real hit.
+			// Uncredited damage would grant no XP for the kill anyway.
+			int headroom = _zombie.Health - Settings.MinRemainingHp;
+			if (headroom <= 0)
 			{
-				// The never-kill floor. A slam whittles a zombie down and then stops; finishing it
-				// takes a real hit. Uncredited damage would grant no XP for the kill anyway.
 				Counters.ZombiesSpared++;
 				return;
 			}
@@ -114,7 +124,7 @@ namespace DoorSlammer
 			// Note we deliberately do NOT call SetIgnoreConsecutiveDamages: its throttle is keyed
 			// only on EnumDamageSource, of which there are two values, so it would collide with
 			// unrelated damage in both directions. DoorCloseTrigger's per-door cooldown does that job.
-			int applied = _zombie.DamageEntity(damageSource, Settings.DamageToZombie,
+			int applied = _zombie.DamageEntity(damageSource, Math.Min(Settings.DamageToZombie, headroom),
 				_criticalHit: false, _impulseScale: 0f);
 
 			// -1 means the hit was rejected outright rather than merely absorbed, so the counter
@@ -141,9 +151,11 @@ namespace DoorSlammer
 				return;
 			}
 
-			if (block.MaxDamage - blockValue.damage <= Settings.MinRemainingHp)
+			// Same floor as the zombie, capped the same way: slamming wears a door down to the floor
+			// and never through it, whatever 'ds dmg' asks for.
+			int headroom = block.MaxDamage - blockValue.damage - Settings.MinRemainingHp;
+			if (headroom <= 0)
 			{
-				// Same floor as the zombie: slamming can wear a door down but never break it open.
 				Counters.DoorsSpared++;
 				return;
 			}
@@ -158,7 +170,8 @@ namespace DoorSlammer
 			// _entityIdThatDamaged -1 keeps the hit unattributed, which also suppresses Undead
 			// Legacy's floating damage number. Block.OnBlockDamaged handles the multiblock
 			// child-to-parent redirect and replicates the new damage value itself.
-			block.DamageBlock(_world, _clrIdx, _parentPos, blockValue, Settings.DamageToDoor,
+			block.DamageBlock(_world, _clrIdx, _parentPos, blockValue,
+				Math.Min(Settings.DamageToDoor, headroom),
 				_entityIdThatDamaged: -1, _attackHitInfo: null, _bUseHarvestTool: false,
 				_bBypassMaxDamage: false);
 			Counters.DoorsDamaged++;

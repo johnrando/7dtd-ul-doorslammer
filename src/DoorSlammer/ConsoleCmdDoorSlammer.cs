@@ -4,14 +4,19 @@ using System.Globalization;
 namespace DoorSlammer
 {
 	/// <summary>
-	/// <c>ds</c> (or <c>doorslammer</c>) - toggles the mod and prints the settings block.
-	/// <c>ds sound</c> cycles the slam sound; <c>ds rage</c> and <c>ds flavor</c> toggle;
-	/// <c>ds dmg</c>, <c>ds floor</c> and <c>ds tuning</c> set the numbers. <c>ds info</c> prints
-	/// the diagnostics and counters, <c>ds reset</c> zeroes them.
+	/// <c>ds</c> (or <c>doorslammer</c>) - prints the settings block and changes nothing.
+	/// <c>ds on</c> and <c>ds off</c> are the master switch; <c>ds sound</c> cycles the slam sound;
+	/// <c>ds rage</c> and <c>ds flavor</c> toggle; <c>ds dmg</c>, <c>ds floor</c> and
+	/// <c>ds tuning</c> set the numbers. <c>ds info</c> prints the diagnostics and counters,
+	/// <c>ds reset</c> zeroes them.
+	///
+	/// The bare command reports rather than acts, and that is the point of it: it is what a player
+	/// types to find out where things stand, so it must never be the thing that changed the answer.
+	/// Everything that changes something has to name the change.
 	///
 	/// The settings block doubles as the menu: every line names the command that changes it, and
-	/// shows what that command left behind. The two toggles list their choices with the live one
-	/// marked, so the block is also the answer to "what can I set this to".
+	/// shows what that command left behind. The switches list their choices with the live one
+	/// marked and say what they do, so the block is also the answer to "what can I set this to".
 	///
 	/// It is kept short on purpose - it is what you read while standing in front of a door.
 	/// Everything that answers "is this thing working" lives in <c>ds info</c> instead: the startup
@@ -30,8 +35,12 @@ namespace DoorSlammer
 			switch (command)
 			{
 			case "":
-				Settings.Enabled = !Settings.Enabled;
-				OutputStatus();
+				OutputMenu("DoorSlammer is " + OnOff(Settings.Enabled));
+				return;
+
+			case "on":
+			case "off":
+				SetEnabled(command == "on");
 				return;
 
 			case "sound":
@@ -75,39 +84,51 @@ namespace DoorSlammer
 
 			default:
 				Output("Unknown option '" + _params[0]
-					+ "'. Try: ds [sound|rage|flavor|dmg|floor|tuning|info|reset]");
+					+ "'. Try: ds [on|off|sound|rage|flavor|dmg|floor|tuning|info|reset]");
 				return;
 			}
 		}
 
 		/// <summary>
-		/// The menu. <paramref name="_header"/> differs because <c>ds</c> has just changed
-		/// something and <c>ds info</c> has not.
+		/// The menu. <paramref name="_header"/> is what separates <c>ds on</c> from a bare
+		/// <c>ds</c>: one has just changed something and the other has not.
 		/// </summary>
 		private static void OutputMenu(string _header)
 		{
 			Output(_header);
-			Line("ds sound", SoundChoices());
-			Line("ds rage", RageChoices());
-			Line("ds flavor", FlavorChoices());
+			Switch("ds on|off", EnabledChoices(), "damage a zombie caught in a slammed door");
 			Line("ds dmg {z} {d}", DamageLine());
+			Switch("ds sound", SoundChoices(), "play a material-relevant sound on slam");
+			Switch("ds rage", RageChoices(), "suppress UL's chance to rage from slam damage");
+			Switch("ds flavor", FlavorChoices(), FletchWoundsBridge.FlavorSummary);
 			Line("ds floor {hp}", FloorLine());
 			Line("ds tuning {cd} {dist}", TuningLine());
 		}
 
-		private static void OutputStatus()
+		/// <summary>
+		/// <c>ds on</c> / <c>ds off</c>. The header says whether anything actually moved, because
+		/// typing the state you were already in is not an error and should not read like a change.
+		/// </summary>
+		private static void SetEnabled(bool _on)
 		{
-			OutputMenu("Door Slammer is now " + (Settings.Enabled ? "ON" : "OFF"));
+			bool changed = Settings.Enabled != _on;
+			Settings.Enabled = _on;
+			OutputMenu("DoorSlammer is " + (changed ? "now " : "already ") + OnOff(_on));
+		}
+
+		private static string OnOff(bool _on)
+		{
+			return _on ? "ON" : "OFF";
 		}
 
 		/// <summary>The menu, with the read-only lines appended in the same column.</summary>
 		private static void OutputInfo()
 		{
-			OutputMenu("Door Slammer is " + (Settings.Enabled ? "ON" : "OFF"));
+			OutputMenu("DoorSlammer is " + OnOff(Settings.Enabled));
 			Line("Undead Legacy", UndeadLegacyInfo.Status);
 			Line("door-close hook", Patches.DoorCloseHookStatus);
 			Line("rage roll patch", Patches.RageSuppressionStatus);
-			Line("Fletch Wounds", FletchWoundsBridge.Status);
+			Line("FletchWounds", FletchWoundsBridge.Status);
 			Line("last slam sound", SlamSound.LastPlayed);
 			Line("door closes checked", Counters.ClosesChecked
 				+ " (" + Counters.Slams + " caught a zombie)");
@@ -133,6 +154,20 @@ namespace DoorSlammer
 		private static void Line(string _label, string _value)
 		{
 			Output("  " + _label.PadRight(22) + ": " + _value);
+		}
+
+		/// <summary>
+		/// A line for a switch: the choices, then what the switch is for. The choice list is padded
+		/// to the width of the longest one - "ds sound"'s three - so the notes line up in a column
+		/// of their own instead of starting wherever the marked option happened to end.
+		///
+		/// A setter has no note, because its value already reads as one: "1 to zombie / 10 to door"
+		/// says what "ds dmg" does. A switch shows "[ off | >impact< | break ]", which says what it
+		/// can be set to and nothing at all about what setting it does.
+		/// </summary>
+		private static void Switch(string _label, string _choices, string _note)
+		{
+			Line(_label, _choices.PadRight(26) + " - " + _note);
 		}
 
 		private static void SetDamage(List<string> _params)
@@ -232,6 +267,11 @@ namespace DoorSlammer
 			return _live ? ">" + _option + "<" : _option;
 		}
 
+		private static string EnabledChoices()
+		{
+			return Choices(Mark("on", Settings.Enabled), Mark("off", !Settings.Enabled));
+		}
+
 		private static string SoundChoices()
 		{
 			return Choices(
@@ -246,13 +286,13 @@ namespace DoorSlammer
 		}
 
 		/// <summary>
-		/// The one menu line that names something outside this mod, so it also reports what it
-		/// found: an interaction is not worth toggling if there is nothing to interact with.
+		/// The one menu line whose note names something outside this mod, so its note is not a
+		/// fixed string but what the lookup found: an interaction is not worth toggling if there
+		/// is nothing to interact with. See <see cref="FletchWoundsBridge.FlavorSummary"/>.
 		/// </summary>
 		private static string FlavorChoices()
 		{
-			return Choices(Mark("on", Settings.Flavor), Mark("off", !Settings.Flavor))
-				+ " " + FletchWoundsBridge.FlavorSummary;
+			return Choices(Mark("on", Settings.Flavor), Mark("off", !Settings.Flavor));
 		}
 
 		private static string DamageLine()
@@ -262,7 +302,8 @@ namespace DoorSlammer
 
 		private static string FloorLine()
 		{
-			return "will not cause damage below " + Settings.MinRemainingHp + " health";
+			return "enemies below " + Settings.MinRemainingHp
+				+ " health will not be affected by slam damage";
 		}
 
 		private static string TuningLine()
@@ -289,23 +330,31 @@ namespace DoorSlammer
 
 		public override string getDescription()
 		{
-			return "Toggles the Door Slammer mod and reports its status.";
+			return "Reports DoorSlammer's settings; 'ds on' and 'ds off' switch it.";
 		}
 
 		public override string getHelp()
 		{
-			return "Usage: ds [sound|rage|flavor|dmg {z} {d}|floor {hp}|tuning {cd} {dist}|info|reset]"
+			return "Usage: ds [on|off|sound|rage|flavor|dmg {z} {d}|floor {hp}|tuning {cd} {dist}"
+				+ "|info|reset]"
 				+ "\r\n\r\nClosing a door on a zombie takes a little health off "
 				+ "both the zombie and the door. It catches at most one zombie - the nearest one "
 				+ "standing in the doorway - and deliberately does nothing else: no knockdown, no "
 				+ "stun, no knockback, no hit reaction, and the damage is credited to nobody, so it "
-				+ "never sets the zombie on you.\r\n\r\nA slam will not land a killing blow by "
-				+ "default. Anything at or below the never-kill floor is left alone, so slamming "
-				+ "whittles a zombie down and then stops, and wears a door down without breaking it "
-				+ "open. Set the floor lower than the damage and that stops being true: a target just "
-				+ "above the floor still takes the whole hit and can die from it.\r\n\r\n'ds' on "
-				+ "its own toggles the mod and prints the settings. Each line names the command that "
-				+ "changes it, so the settings block is the menu.\r\n\r\n'ds sound' cycles the "
+				+ "never sets the zombie on you.\r\n\r\nA slam cannot land a killing blow. Each hit "
+				+ "is capped to whatever health the target has above the never-kill floor, so a "
+				+ "target at or below the floor is left alone and one above it lands exactly on the "
+				+ "floor rather than through it. Slamming therefore whittles a zombie down and then "
+				+ "stops, and wears a door down without breaking it open, at any 'ds dmg'."
+				+ "\r\n\r\n'ds' on "
+				+ "its own prints the settings and changes nothing - it is the status read, so it is "
+				+ "safe to type when you only want to look. Each line names the command that changes "
+				+ "it, so the settings block is also the menu, and each switch says what it is for."
+				+ "\r\n\r\n'ds on' and 'ds off' are the master switch. With it off the door-close "
+				+ "hook returns immediately, so a slam does nothing at all and every other setting "
+				+ "here is inert. Saying which state you want rather than toggling it means the "
+				+ "command reads the same whichever state you were in, and repeating it is harmless."
+				+ "\r\n\r\n'ds sound' cycles the "
 				+ "sound a damaging slam plays on the door: impact (what a zombie's fist sounds "
 				+ "like on that door), break (what it sounds like when it breaks), off. Both are "
 				+ "the game's own sounds, picked automatically from the door's material, so every "
@@ -316,14 +365,15 @@ namespace DoorSlammer
 				+ "zombie the odds add up. Off by default. Without Undead Legacy installed this "
 				+ "suppresses vanilla's own rage roll instead.\r\n\r\n'ds dmg {z} {d}' sets the HP a "
 				+ "slam takes off the zombie and off the door: 1 and 10 by default.\r\n\r\n'ds floor "
-				+ "{hp}' sets the never-kill floor, 10 by default. A target at or below it is left "
-				+ "alone, which is what stops a slam killing a zombie or breaking a door open. Keep it "
-				+ "at or above 'ds dmg' for that to hold: anything just above a lower floor still takes "
-				+ "the whole hit. 0 removes the protection entirely.\r\n\r\n"
+				+ "{hp}' sets the never-kill floor, 10 by default. A slam takes at most the health "
+				+ "the target has above it, which is what stops a slam killing a zombie or breaking "
+				+ "a door open. It holds at any 'ds dmg': a 100 HP slam on a zombie with 50 left "
+				+ "takes 40 and leaves it standing on the floor. 0 removes the protection entirely, "
+				+ "and is the only setting at which a slam itself can kill.\r\n\r\n"
 				+ "'ds flavor' toggles the extra behaviour supported mods offer, on by default. It "
-				+ "does nothing unless one of them is installed. Currently that is Fletch Wounds: a "
+				+ "does nothing unless one of them is installed. Currently that is FletchWounds: a "
 				+ "slam that catches a zombie with one of your arrows still in it drives that arrow "
-				+ "deeper, once per slam however many are in it. That is Fletch Wounds' arrow rather "
+				+ "deeper, once per slam however many are in it. That is FletchWounds' arrow rather "
 				+ "than the door's damage, so unlike a slam it is credited to you and can land a "
 				+ "killing blow. Both mods carry this switch and toggling either one moves both."
 				+ "\r\n\r\n"

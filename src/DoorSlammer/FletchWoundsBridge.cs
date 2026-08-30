@@ -5,11 +5,11 @@ using HarmonyLib;
 namespace DoorSlammer
 {
 	/// <summary>
-	/// The optional other half of a slam: if Fletch Wounds is installed, a slam that catches a
+	/// The optional other half of a slam: if FletchWounds is installed, a slam that catches a
 	/// zombie with one of the player's arrows still in it drives that arrow deeper.
 	///
 	/// Resolved by reflection rather than referenced, because either mod has to work with the other
-	/// absent and a reference would make one require the other. Fletch Wounds publishes two methods
+	/// absent and a reference would make one require the other. FletchWounds publishes two methods
 	/// for this - the proc itself and a flavor setter, bound independently so a build carrying only
 	/// one still gets that half. Every parameter is a game type, so neither assembly needs a type
 	/// from the other, and each is bound once into a delegate so the call site pays no reflection
@@ -31,7 +31,7 @@ namespace DoorSlammer
 
 		private const string MethodName = "TryProc";
 
-		private const string Label = "Fletch Wounds";
+		private const string Label = "FletchWounds";
 
 		/// <summary>Outcome of the lookup, as reported by <c>ds info</c>.</summary>
 		internal static string Status = "not checked";
@@ -46,7 +46,7 @@ namespace DoorSlammer
 		/// for a human.</summary>
 		private static bool found;
 
-		/// <summary>Fletch Wounds' own flavor setter, bound the same way it binds ours.</summary>
+		/// <summary>FletchWounds' own flavor setter, bound the same way it binds ours.</summary>
 		private static Action<bool> setTheirs;
 
 		internal static void Resolve()
@@ -94,7 +94,7 @@ namespace DoorSlammer
 		}
 
 		/// <summary>
-		/// Binds Fletch Wounds' flavor setter so <c>ds flavor</c> can move both switches at once.
+		/// Binds FletchWounds' flavor setter so <c>ds flavor</c> can move both switches at once.
 		/// Optional, and separately so: a build whose TryProc binds but whose SetFlavor does not
 		/// still gets the interaction, the player just has to set the other switch themselves.
 		/// </summary>
@@ -148,7 +148,7 @@ namespace DoorSlammer
 			// DoorCloseTrigger has already established that we are the authoritative, non-remote
 			// machine, and the whole door-activation path runs on the machine of the player who
 			// pressed the key - see ServerAuthoritative for the analysis. So the primary player is
-			// the one who closed it. Fletch Wounds' own arrow-pull hook attributes the same way.
+			// the one who closed it. FletchWounds' own arrow-pull hook attributes the same way.
 			//
 			// On the dedicated-server scaffold there is no primary player, this returns null, and
 			// the proc is skipped - which is the honest outcome given that path's attribution

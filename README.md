@@ -1,4 +1,4 @@
-# Door Slammer
+# DoorSlammer
 
 A 7 Days To Die mod. Closing a door on a zombie takes health off **both the zombie and the door**
 — 1 HP off the zombie, 10 HP off the door by default.
@@ -20,25 +20,30 @@ Load order does not matter.
 
 ## Console commands
 
-`ds` toggles the mod and prints the menu — `doorslammer` is an alias. Every line names the command
-that changes it, so the menu is also the reference:
+`ds` prints the menu and changes nothing — `doorslammer` is an alias. Every line names the command
+that changes it and says what it is for, so the menu is also the reference:
 
 ```
-Door Slammer is now ON
-  ds sound              : [ off | >impact< | break ]
-  ds rage               : [ >off< | on ]
-  ds flavor             : [ >on< | off ] enhanced mod interaction with Fletch Wounds
+DoorSlammer is ON
+  ds on|off             : [ >on< | off ]             - damage a zombie caught in a slammed door
   ds dmg {z} {d}        : 1 to zombie / 10 to door
-  ds floor {hp}         : will not cause damage below 10 health
+  ds sound              : [ off | >impact< | break ] - play a material-relevant sound on slam
+  ds rage               : [ >off< | on ]             - suppress UL's chance to rage from slam damage
+  ds flavor             : [ >on< | off ]             - enhanced mod interaction with FletchWounds
+  ds floor {hp}         : enemies below 10 health will not be affected by slam damage
   ds tuning {cd} {dist} : 1 sec cooldown / 0.35 range
 ```
+
+`ds on` and `ds off` are the master switch — with it off the door-close hook returns immediately, so
+a slam does nothing and every other setting is inert. They say which state you want rather than
+toggling, so the command reads the same whichever state you were in and repeating it is harmless.
 
 `ds tuning` takes the per-door cooldown in seconds and the reach past the frame in metres. A setter
 called with no arguments prints its usage and current value; changes last until the game restarts.
 
 `ds flavor` switches on the extra behaviour a supported mod offers, and names whichever it found.
-Right now that is **Fletch Wounds** — catch a zombie that still has one of your arrows in it and
-the door drives that arrow deeper. The arrow is Fletch Wounds' doing rather than the door's, so
+Right now that is **FletchWounds** — catch a zombie that still has one of your arrows in it and
+the door drives that arrow deeper. The arrow is FletchWounds' doing rather than the door's, so
 what it costs is documented there. Both mods carry the switch and **toggling either one moves
 both**, so you only ever have to set it in one place.
 
@@ -50,10 +55,11 @@ zeroes those counters.
 - Catches **at most one zombie** — the nearest one standing in the doorway.
 - Does **nothing else**: no knockdown, stun, knockback or hit reaction. The damage is credited to
   nobody, so it never sets the zombie on you and grants no XP.
-- **Will not land a killing blow by default, unless you set the HP floor less than the damage
-  done.** A target at or below the floor is left alone, so slamming whittles a zombie down and then
-  stops, and wears a door down without breaking it open. Drop the floor under `ds dmg` and that
-  stops holding: a target just above the floor is not spared, and takes the whole hit.
+- **Cannot land a killing blow.** Each hit is capped to whatever health the target has above the
+  never-kill floor, so a target at or below the floor is left alone and one above it lands exactly
+  on the floor rather than through it. Slamming whittles a zombie down and then stops, and wears a
+  door down without breaking it open — at any `ds dmg`, including one far larger than the floor.
+  Only `ds floor 0` removes that.
 - Costs nothing when no zombie is caught, so ordinary door use around your base is free.
 
 ## Sound
