@@ -8,7 +8,8 @@ slam it shut, repeat. Now the slam itself does a little work, and costs you a li
 
 ## Installing
 
-Copy `dist/DoorSlammer/` (checked into this repo, so no build needed) into the game's `Mods/`:
+Download the zip from [Releases](https://github.com/johnrando/ul-doorslammer/releases) and extract
+it into the game's `Mods/`. The mod folder is the root of the archive, so it lands as:
 
 ```
 Mods/DoorSlammer/
@@ -16,7 +17,7 @@ Mods/DoorSlammer/
 └── DoorSlammer.dll
 ```
 
-Load order does not matter.
+Load order does not matter, and nothing needs building.
 
 ## Console commands
 
@@ -128,7 +129,14 @@ install, against the game's own assemblies.
 dotnet build src/DoorSlammer/DoorSlammer.csproj -c Release
 ```
 
-That restages `dist/DoorSlammer/`. Rebuild before committing so `dist/` matches `src/`.
+That restages `dist/DoorSlammer/`, ready to copy into `Mods/`. To also build the release archive:
+
+```
+dotnet build src/DoorSlammer/DoorSlammer.csproj -c Release -t:Package
+```
+
+That writes `release/DoorSlammer-<version>-<date>.zip`, taking the version from `ModInfo.xml`.
+Neither `dist/` nor `release/` is tracked — the zip is published as a GitHub Release instead.
 
 ## License
 
