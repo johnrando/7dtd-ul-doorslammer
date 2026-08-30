@@ -26,6 +26,7 @@ namespace DoorSlammer
 
 		internal static string RageSuppressionStatus = NotRunYet;
 
+
 		private static bool applied;
 
 		internal static void Apply()
@@ -49,6 +50,7 @@ namespace DoorSlammer
 		private static void ApplyPatches()
 		{
 			UndeadLegacyInfo.Report();
+			FletchWoundsBridge.Resolve();
 
 			Harmony harmony = new Harmony(HarmonyId);
 			ApplyDoorCloseHook(harmony);

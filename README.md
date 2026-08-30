@@ -27,6 +27,7 @@ that changes it, so the menu is also the reference:
 Door Slammer is now ON
   ds sound              : [ off | >impact< | break ]
   ds rage               : [ >off< | on ]
+  ds flavor             : [ >on< | off ] enhanced mod interaction with Fletch Wounds
   ds dmg {z} {d}        : 1 to zombie / 10 to door
   ds floor {hp}         : will not cause damage below 10 health
   ds tuning {cd} {dist} : 1 sec cooldown / 0.35 range
@@ -34,6 +35,12 @@ Door Slammer is now ON
 
 `ds tuning` takes the per-door cooldown in seconds and the reach past the frame in metres. A setter
 called with no arguments prints its usage and current value; changes last until the game restarts.
+
+`ds flavor` switches on the extra behaviour a supported mod offers, and names whichever it found.
+Right now that is **Fletch Wounds** — catch a zombie that still has one of your arrows in it and
+the door drives that arrow deeper. The arrow is Fletch Wounds' doing rather than the door's, so
+what it costs is documented there. Both mods carry the switch and **toggling either one moves
+both**, so you only ever have to set it in one place.
 
 Two more: `ds info` prints the same block with the patch state and counters added, and `ds reset`
 zeroes those counters.
@@ -43,8 +50,10 @@ zeroes those counters.
 - Catches **at most one zombie** — the nearest one standing in the doorway.
 - Does **nothing else**: no knockdown, stun, knockback or hit reaction. The damage is credited to
   nobody, so it never sets the zombie on you and grants no XP.
-- **Never lands a killing blow.** A target at or below the floor is left alone, so slamming
-  whittles a zombie down and then stops, and wears a door down but never breaks it open.
+- **Will not land a killing blow by default, unless you set the HP floor less than the damage
+  done.** A target at or below the floor is left alone, so slamming whittles a zombie down and then
+  stops, and wears a door down without breaking it open. Drop the floor under `ds dmg` and that
+  stops holding: a target just above the floor is not spared, and takes the whole hit.
 - Costs nothing when no zombie is caught, so ordinary door use around your base is free.
 
 ## Sound
@@ -78,6 +87,7 @@ All tunable in `Settings.cs`, and all but the sound settable in-game:
 | never-kill floor | 10 HP remaining |
 | cooldown per door | 1 s |
 | reach past the door frame | 0.35 m |
+| enhanced mod interaction | on |
 
 The cooldown stops a held or macro'd activate key from grinding out damage frame by frame.
 

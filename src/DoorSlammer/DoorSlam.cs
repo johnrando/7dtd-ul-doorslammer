@@ -10,6 +10,10 @@ namespace DoorSlammer
 	/// This is deliberately the only place the damage lives. <see cref="DoorCloseTrigger"/> decides
 	/// *when* a slam happened; everything about *what* a slam does is here, so the scaffolded
 	/// server-authoritative trigger in <see cref="ServerAuthoritative"/> can reuse it unchanged.
+	///
+	/// That includes the one thing a slam does not do by itself: <see cref="FletchWoundsBridge"/>
+	/// hands the caught zombie to Fletch Wounds, if it is installed, so an arrow already stuck in
+	/// that zombie gets driven deeper too.
 	/// </summary>
 	internal static class DoorSlam
 	{
@@ -31,6 +35,13 @@ namespace DoorSlammer
 
 			Counters.Slams++;
 			DamageZombie(zombie, _parentPos);
+
+			// Outside DamageZombie rather than inside it, and that is the decision: DamageZombie
+			// early-returns at the never-kill floor, and an arrow is allowed past it. The floor is a
+			// rule about what a door may do, not about what your own ammunition may do once the door
+			// drives it deeper. Inert unless Fletch Wounds is installed.
+			FletchWoundsBridge.TryProc(_world, zombie);
+
 			DamageDoor(_world, _clrIdx, _parentPos);
 		}
 

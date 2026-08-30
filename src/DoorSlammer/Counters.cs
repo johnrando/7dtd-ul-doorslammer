@@ -27,6 +27,10 @@ namespace DoorSlammer
 		/// <summary>Slam hits whose damage response skipped the rage roll.</summary>
 		internal static int RageSuppressed;
 
+		/// <summary>Slams that drove an arrow deeper through Fletch Wounds. At most one per slam,
+		/// and always zero without that mod installed.</summary>
+		internal static int ArrowProcs;
+
 		internal static void Reset()
 		{
 			ClosesChecked = 0;
@@ -36,6 +40,7 @@ namespace DoorSlammer
 			DoorsDamaged = 0;
 			DoorsSpared = 0;
 			RageSuppressed = 0;
+			ArrowProcs = 0;
 		}
 	}
 }

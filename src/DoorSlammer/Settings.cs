@@ -46,5 +46,13 @@ namespace DoorSlammer
 		/// in metres. Zombies press right up against the frame rather than standing inside it.
 		/// </summary>
 		internal static float SearchPadding = 0.35f;
+
+		/// <summary>
+		/// Whether to take part in the extra behaviour other supported mods offer. On by default: it
+		/// does nothing at all unless one of them is installed, and the interaction it enables is one
+		/// the player has to set up on purpose. Currently just Fletch Wounds - see
+		/// <see cref="FletchWoundsBridge"/>. Both mods carry this switch and both have to be on.
+		/// </summary>
+		internal static bool Flavor = true;
 	}
 }
