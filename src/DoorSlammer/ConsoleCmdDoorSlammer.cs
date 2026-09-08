@@ -45,11 +45,13 @@ namespace DoorSlammer
 
 			case "sound":
 				SlamSound.Cycle();
+				Config.Save();
 				Output(SlamSound.Describe());
 				return;
 
 			case "rage":
 				Settings.SuppressRage = !Settings.SuppressRage;
+				Config.Save();
 				Output(Settings.SuppressRage
 					? "Rage suppression ON - slam damage no longer rolls for rage."
 					: "Rage suppression OFF - slam damage can enrage zombies like any other damage.");
@@ -57,6 +59,7 @@ namespace DoorSlammer
 
 			case "flavor":
 				Settings.Flavor = !Settings.Flavor;
+				Config.Save();
 				FletchWoundsBridge.PushFlavor(Settings.Flavor);
 				Output(FletchWoundsBridge.Describe());
 				return;
@@ -113,6 +116,10 @@ namespace DoorSlammer
 		{
 			bool changed = Settings.Enabled != _on;
 			Settings.Enabled = _on;
+			if (changed)
+			{
+				Config.Save();
+			}
 			OutputMenu("DoorSlammer is " + (changed ? "now " : "already ") + OnOff(_on));
 		}
 
@@ -125,6 +132,7 @@ namespace DoorSlammer
 		private static void OutputInfo()
 		{
 			OutputMenu("DoorSlammer is " + OnOff(Settings.Enabled));
+			Line("settings file", Config.Status);
 			Line("Undead Legacy", UndeadLegacyInfo.Status);
 			Line("door-close hook", Patches.DoorCloseHookStatus);
 			Line("rage roll patch", Patches.RageSuppressionStatus);
@@ -186,6 +194,7 @@ namespace DoorSlammer
 
 			Settings.DamageToZombie = zombie;
 			Settings.DamageToDoor = door;
+			Config.Save();
 			Output("Slam damage: " + DamageLine());
 		}
 
@@ -203,6 +212,7 @@ namespace DoorSlammer
 			}
 
 			Settings.MinRemainingHp = floor;
+			Config.Save();
 			Output("Health floor: " + FloorLine());
 		}
 
@@ -222,6 +232,7 @@ namespace DoorSlammer
 
 			Settings.CooldownSeconds = cooldown;
 			Settings.SearchPadding = range;
+			Config.Save();
 			Output("Tuning: " + TuningLine());
 		}
 
@@ -359,13 +370,13 @@ namespace DoorSlammer
 				+ "like on that door), break (what it sounds like when it breaks), off. Both are "
 				+ "the game's own sounds, picked automatically from the door's material, so every "
 				+ "door type sounds like itself, and neither makes any noise the AI can hear. "
-				+ "Impact by default.\r\n\r\n'ds rage' toggles "
+				+ "Break by default.\r\n\r\n'ds rage' toggles "
 				+ "suppression of the rage roll on slam damage. Undead Legacy rolls for rage on every "
 				+ "damage response no matter how small, so over the many slams it takes to whittle a "
 				+ "zombie the odds add up. Off by default. Without Undead Legacy installed this "
 				+ "suppresses vanilla's own rage roll instead.\r\n\r\n'ds dmg {z} {d}' sets the HP a "
-				+ "slam takes off the zombie and off the door: 1 and 10 by default.\r\n\r\n'ds floor "
-				+ "{hp}' sets the never-kill floor, 10 by default. A slam takes at most the health "
+				+ "slam takes off the zombie and off the door: 10 and 10 by default.\r\n\r\n'ds floor "
+				+ "{hp}' sets the never-kill floor, 20 by default. A slam takes at most the health "
 				+ "the target has above it, which is what stops a slam killing a zombie or breaking "
 				+ "a door open. It holds at any 'ds dmg': a 100 HP slam on a zombie with 50 left "
 				+ "takes 40 and leaves it standing on the floor. 0 removes the protection entirely, "
@@ -381,8 +392,13 @@ namespace DoorSlammer
 				+ "two damaging slams of the same door, and how far past the frame a zombie still "
 				+ "counts as standing in the doorway, in metres: 1 and 0.35 by default. The cooldown "
 				+ "is what stops a held or macro'd activate key grinding out damage frame by frame."
-				+ "\r\n\r\nThe three setters take effect immediately and last until the game is "
-				+ "restarted; the defaults live in Settings.cs.\r\n\r\n'ds info' prints the same block with the "
+				+ "\r\n\r\nEvery setting here takes effect immediately and is written straight to a "
+				+ "settings file, so it survives a restart - and survives updating the mod, because "
+				+ "the file lives in the game's user data folder next to Saves rather than in Mods. "
+				+ "'ds info' prints its full path. It is plain 'key = value' text and can be edited "
+				+ "by hand with the game closed; a line that will not parse is ignored rather than "
+				+ "fatal, and deleting the file goes back to the built-in defaults in Settings.cs."
+				+ "\r\n\r\n'ds info' prints the same block with the "
 				+ "patch state and the counters added. The key line is 'door closes checked': the startup log "
 				+ "only proves the hook was installed, that number proves door closes are reaching "
 				+ "it. If it climbs but 'caught a zombie' does not, the zombie is not being seen as "

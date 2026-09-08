@@ -8,7 +8,7 @@ namespace DoorSlammer
 	///
 	/// UL replaces <c>EntityHuman.ProcessDamageResponseLocal</c> with a prefix that always returns
 	/// false, and rolls <c>rageChance * (Strength / 40)</c> on *every* damage response. At the
-	/// default 25% setting a 1 HP slam is roughly 0.63% to enrage and about 1 in 4,500 to trigger
+	/// default 25% setting a slam is roughly 0.63% to enrage and about 1 in 4,500 to trigger
 	/// super rage - double speed for 30 seconds plus an alert scream. Spread over the many slams it
 	/// takes to whittle a zombie down, that adds up to a coin flip, which is squarely one of the
 	/// "other effects" this mod is supposed to avoid.

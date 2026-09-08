@@ -1,9 +1,13 @@
 namespace DoorSlammer
 {
 	/// <summary>
-	/// Runtime knobs, all switchable from the <c>ds</c> console command. Deliberately plain
-	/// statics rather than a config file: everything here is cheap to re-tune mid-session, and
-	/// the interesting ones are toggles you want to flip while standing in front of a door.
+	/// Runtime knobs, all switchable from the <c>ds</c> console command. Everything here is cheap
+	/// to re-tune mid-session, and the interesting ones are toggles you want to flip while standing
+	/// in front of a door.
+	///
+	/// The values below are the built-in defaults, and they are what a first run writes out.
+	/// After that the player's own settings file is what loads - see <see cref="Config"/>, which
+	/// reads it over these at startup and writes it back out on every change.
 	/// </summary>
 	internal static class Settings
 	{
@@ -21,10 +25,10 @@ namespace DoorSlammer
 		/// Which of the game's own sounds a damaging slam plays on the door. Cycled with
 		/// <c>ds sound</c>; see <see cref="SlamSound"/> for where each name comes from.
 		/// </summary>
-		internal static SlamSoundMode SoundMode = SlamSoundMode.Impact;
+		internal static SlamSoundMode SoundMode = SlamSoundMode.Break;
 
 		/// <summary>HP the slam takes off the zombie.</summary>
-		internal static int DamageToZombie = 1;
+		internal static int DamageToZombie = 10;
 
 		/// <summary>HP the slam takes off the door.</summary>
 		internal static int DamageToDoor = 10;
@@ -36,7 +40,7 @@ namespace DoorSlammer
 		/// zombie or break a door open however large <see cref="DamageToZombie"/> and
 		/// <see cref="DamageToDoor"/> get. Applied to each target independently.
 		/// </summary>
-		internal static int MinRemainingHp = 10;
+		internal static int MinRemainingHp = 20;
 
 		/// <summary>
 		/// Minimum seconds between two damaging slams of the same door. Stops a held or macro'd

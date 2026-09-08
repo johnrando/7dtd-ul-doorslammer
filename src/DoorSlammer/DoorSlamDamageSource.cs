@@ -8,7 +8,7 @@ namespace DoorSlammer
 	/// The base class choice carries the "no other effects" requirement, and each half matters:
 	/// <list type="bullet">
 	/// <item><c>EnumDamageSource.Internal</c> makes <c>DamageSource.AffectedByArmor()</c> false, so
-	/// Undead Legacy's armour system cannot round the 1 HP down to nothing.</item>
+	/// Undead Legacy's armour system cannot round the slam's damage down to nothing.</item>
 	/// <item><c>EnumDamageTypes.None</c> makes <c>DamageSource.CanStun</c> false, so the hit never
 	/// accumulates into <c>bodyDamage.StunProne</c>/<c>StunKnee</c> and can never knock down.</item>
 	/// </list>

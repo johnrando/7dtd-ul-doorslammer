@@ -4,6 +4,6 @@
 	<DisplayName value="DoorSlammer" />
 	<Description value="Slamming a door shut on a zombie deals a small amount of damage to both the zombie and the door. Hits at most one zombie, never lands a killing blow, and causes no knockdown, stun or aggro. Compatible with Undead Legacy." />
 	<Author value="John Rando" />
-	<Version value="0.0.0.2" />
+	<Version value="0.0.0.3" />
 	<Website value="" />
 </xml>

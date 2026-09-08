@@ -19,10 +19,14 @@ namespace DoorSlammer
 		/// Called when the player toggles the flavor switch in a supported mod, so both move
 		/// together. Deliberately does not push back: whoever the player actually typed at owns the
 		/// propagation, which is what keeps the two from calling each other forever.
+		///
+		/// It does save, though. The switch the player moved was a real change to this mod's
+		/// settings whichever command they typed at, so it has to survive a restart on both sides.
 		/// </summary>
 		public static void SetFlavor(bool _on)
 		{
 			Settings.Flavor = _on;
+			Config.Save();
 		}
 	}
 }

@@ -1,7 +1,7 @@
 # DoorSlammer
 
 A 7 Days To Die mod. Closing a door on a zombie takes health off **both the zombie and the door**
-— 1 HP off the zombie, 10 HP off the door by default.
+— 10 HP off the zombie, 10 HP off the door by default.
 
 It puts a small price on a very safe tactic: trap a zombie behind a door, open it, land a hit,
 slam it shut, repeat. Now the slam itself does a little work, and costs you a little door.
@@ -27,11 +27,11 @@ that changes it and says what it is for, so the menu is also the reference:
 ```
 DoorSlammer is ON
   ds on|off             : [ >on< | off ]             - damage a zombie caught in a slammed door
-  ds dmg {z} {d}        : 1 to zombie / 10 to door
-  ds sound              : [ off | >impact< | break ] - play a material-relevant sound on slam
+  ds dmg {z} {d}        : 10 to zombie / 10 to door
+  ds sound              : [ off | impact | >break< ] - play a material-relevant sound on slam
   ds rage               : [ >off< | on ]             - suppress UL's chance to rage from slam damage
   ds flavor             : [ >on< | off ]             - enhanced mod interaction with FletchWounds
-  ds floor {hp}         : enemies below 10 health will not be affected by slam damage
+  ds floor {hp}         : enemies below 20 health will not be affected by slam damage
   ds tuning {cd} {dist} : 1 sec cooldown / 0.35 range
 ```
 
@@ -40,7 +40,8 @@ a slam does nothing and every other setting is inert. They say which state you w
 toggling, so the command reads the same whichever state you were in and repeating it is harmless.
 
 `ds tuning` takes the per-door cooldown in seconds and the reach past the frame in metres. A setter
-called with no arguments prints its usage and current value; changes last until the game restarts.
+called with no arguments prints its usage and current value. **Changes are saved** — see
+[Settings file](#settings-file).
 
 `ds flavor` switches on the extra behaviour a supported mod offers, and names whichever it found.
 Right now that is **FletchWounds** — catch a zombie that still has one of your arrows in it and
@@ -74,8 +75,8 @@ never seen still gets the right sound, and one whose material has none gets sile
 
 | Mode | Sound |
 |---|---|
-| **impact** (default) | `organichit<material>` — what a zombie's fist sounds like on that door |
-| **break** | the door's own `DestroyFX` sound, else `<material>destroy` — what it sounds like when it breaks |
+| **impact** | `organichit<material>` — what a zombie's fist sounds like on that door |
+| **break** (default) | the door's own `DestroyFX` sound, else `<material>destroy` — what it sounds like when it breaks |
 
 **Neither is audible to zombies.** The sound goes out with the entity id left at `-1`, which is
 what `Manager.Play` checks before signalling the AI — so no AI noise and no screamer heat, which
@@ -84,24 +85,55 @@ does not.
 
 ## Defaults
 
-All tunable in `Settings.cs`, and all but the sound settable in-game:
+All settable in-game, and all written back to the settings file as soon as you set them. These are
+what a first run starts from:
 
 | Setting | Default |
 |---|---|
-| slam sound | impact |
-| damage to the zombie | 1 HP |
+| slam sound | break |
+| damage to the zombie | 10 HP |
 | damage to the door | 10 HP |
-| never-kill floor | 10 HP remaining |
+| never-kill floor | 20 HP remaining |
 | cooldown per door | 1 s |
 | reach past the door frame | 0.35 m |
 | enhanced mod interaction | on |
 
 The cooldown stops a held or macro'd activate key from grinding out damage frame by frame.
 
+## Settings file
+
+Every setting survives a restart. A change made with `ds` is written straight out to:
+
+```
+%APPDATA%/7DaysToDie/DoorSlammer/settings.txt
+```
+
+— the game's own user data folder, next to `Saves`, rather than `Mods/DoorSlammer/`, so updating
+the mod does not take your settings with it. `ds info` prints the full path and whether the last
+read or write worked.
+
+It is plain `key = value` text, one line per setting, each naming the command that sets it:
+
+```
+enabled       = on       # ds on|off
+damage.zombie = 10       # ds dmg {z} {d}
+damage.door   = 10       # ds dmg {z} {d}
+sound         = break    # ds sound - off, impact or break
+rage          = off      # ds rage
+flavor        = on       # ds flavor
+floor         = 20       # ds floor {hp}
+cooldown      = 1        # ds tuning {cd} {dist}
+range         = 0.35     # ds tuning {cd} {dist}
+```
+
+Edit it by hand with the game closed — it is rewritten whenever a `ds` command changes something.
+A line that will not parse is logged and ignored rather than fatal, and deleting the file brings
+back the defaults above (which live in `Settings.cs`).
+
 ## Undead Legacy
 
 **Not required** — the mod works fine on a plain install, and is built to sit alongside UL without
-modifying anything of UL's. Tested against **UL 2.7.19**; all of UL's ordinary doors are covered.
+modifying anything of UL's. Tested against **UL 2.7.24**; all of UL's ordinary doors are covered.
 
 **`ds rage`.** UL rolls a chance to enrage a zombie on every bit of damage it takes, however small
 — only around 0.63% per slam at UL's default, but across the many slams it takes to whittle one
