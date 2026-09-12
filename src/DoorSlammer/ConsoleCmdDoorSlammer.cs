@@ -43,8 +43,8 @@ namespace DoorSlammer
 			case "flavor":
 				Settings.Flavor = !Settings.Flavor;
 				Config.Save();
-				FletchWoundsBridge.PushFlavor(Settings.Flavor);
-				Output(FletchWoundsBridge.Describe());
+				FlavorBridges.PushFlavor(Settings.Flavor);
+				Output(FlavorBridges.Describe());
 				return;
 
 			case "dmg":
@@ -82,7 +82,7 @@ namespace DoorSlammer
 			Line("ds dmg {z} {d}", DamageLine());
 			Switch("ds sound", SoundChoices(), "play a material-relevant sound on slam");
 			Switch("ds rage", RageChoices(), "suppress UL's chance to rage from slam damage");
-			Switch("ds flavor", FlavorChoices(), FletchWoundsBridge.FlavorSummary);
+			Switch("ds flavor", FlavorChoices(), FlavorBridges.FlavorSummary);
 			Line("ds floor {hp}", FloorLine());
 			Line("ds tuning {cd} {dist}", TuningLine());
 		}
@@ -113,7 +113,10 @@ namespace DoorSlammer
 			Line("Undead Legacy", UndeadLegacyInfo.Status);
 			Line("door-close hook", Patches.DoorCloseHookStatus);
 			Line("rage roll patch", Patches.RageSuppressionStatus);
-			Line("FletchWounds", FletchWoundsBridge.Status);
+			for (int i = 0; i < FlavorBridges.All.Length; i++)
+			{
+				Line(FlavorBridges.All[i].Label, FlavorBridges.All[i].Status);
+			}
 			Line("last slam sound", SlamSound.LastPlayed);
 			Line("door closes checked", Counters.ClosesChecked
 				+ " (" + Counters.Slams + " caught a zombie)");
@@ -122,7 +125,10 @@ namespace DoorSlammer
 			Line("doors", Counters.DoorsDamaged + " damaged, "
 				+ Counters.DoorsSpared + " spared");
 			Line("rage rolls suppressed", Counters.RageSuppressed.ToString());
-			Line("arrows driven in", Counters.ArrowProcs.ToString());
+			for (int i = 0; i < FlavorBridges.All.Length; i++)
+			{
+				Line("via " + FlavorBridges.All[i].Label, FlavorBridges.All[i].Procs + " slams acted on");
+			}
 
 			if (Counters.ClosesChecked == 0)
 			{
@@ -326,11 +332,14 @@ namespace DoorSlammer
 				+ "takes 40 and leaves it standing on the floor. 0 removes the protection entirely, "
 				+ "and is the only setting at which a slam itself can kill.\r\n\r\n"
 				+ "'ds flavor' toggles the extra behaviour supported mods offer, on by default. It "
-				+ "does nothing unless one of them is installed. Currently that is FletchWounds: a "
-				+ "slam that catches a zombie with one of your arrows still in it drives that arrow "
-				+ "deeper, once per slam however many are in it. That is FletchWounds' arrow rather "
-				+ "than the door's damage, so unlike a slam it is credited to you and can land a "
-				+ "killing blow. Both mods carry this switch and toggling either one moves both."
+				+ "does nothing unless one of them is installed. Currently that is FletchWounds and "
+				+ "Stumblr. FletchWounds: a slam that catches a zombie with one of your arrows still "
+				+ "in it drives that arrow deeper, once per slam however many are in it. That is "
+				+ "FletchWounds' arrow rather than the door's damage, so unlike a slam it is credited "
+				+ "to you and can land a killing blow. Stumblr: a slam that catches a zombie can "
+				+ "trip it, in one of the game's own stumble animations; 'sb door' sets the chance. "
+				+ "Every linked mod carries this switch and toggling it in any one of them moves all "
+				+ "of them."
 				+ "\r\n\r\n"
 				+ "'ds tuning {cd} {dist}' sets the seconds between "
 				+ "two damaging slams of the same door, and how far past the frame a zombie still "

@@ -32,7 +32,7 @@ namespace DoorSlammer
 			// Outside DamageZombie on purpose: the never-kill floor is a rule about what a door may
 			// do, not about what the player's own arrow may do once the door drives it deeper. This
 			// is the only part of a slam that can land a killing blow. Inert without FletchWounds.
-			FletchWoundsBridge.TryProc(_world, zombie);
+			FlavorBridges.TryProc(_world, zombie);
 
 			DamageDoor(_world, _clrIdx, _parentPos);
 		}

@@ -30,7 +30,7 @@ DoorSlammer is ON
   ds dmg {z} {d}        : 10 to zombie / 10 to door
   ds sound              : [ off | impact | >break< ] - play a material-relevant sound on slam
   ds rage               : [ >off< | on ]             - suppress UL's chance to rage from slam damage
-  ds flavor             : [ >on< | off ]             - enhanced mod interaction with FletchWounds
+  ds flavor             : [ >on< | off ]             - enhanced mod interaction with FletchWounds, Stumblr
   ds floor {hp}         : enemies below 20 health will not be affected by slam damage
   ds tuning {cd} {dist} : 1 sec cooldown / 0.35 range
 ```
@@ -43,11 +43,13 @@ toggling, so the command reads the same whichever state you were in and repeatin
 called with no arguments prints its usage and current value. **Changes are saved** — see
 [Settings file](#settings-file).
 
-`ds flavor` switches on the extra behaviour a supported mod offers, and names whichever it found.
-Right now that is **FletchWounds** — catch a zombie that still has one of your arrows in it and
-the door drives that arrow deeper. The arrow is FletchWounds' doing rather than the door's, so
-what it costs is documented there. Both mods carry the switch and **toggling either one moves
-both**, so you only ever have to set it in one place.
+`ds flavor` switches on the extra behaviour supported mods offer, and names whichever it found.
+Right now that is **FletchWounds** and **Stumblr**. FletchWounds: catch a zombie that still has one
+of your arrows in it and the door drives that arrow deeper. Stumblr: a zombie caught in the door
+can go down in one of the game's own stumble animations, with a chance set by `sb door`. Each
+effect is the other mod's doing rather than the door's, so what it costs is documented there.
+Every linked mod carries the switch and **toggling it in any one of them moves all of them**, so
+you only ever have to set it in one place.
 
 Two more: `ds info` prints the same block with the patch state and counters added, and `ds reset`
 zeroes those counters.

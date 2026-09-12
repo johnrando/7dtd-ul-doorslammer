@@ -25,9 +25,6 @@ namespace DoorSlammer
 
 		internal static int RageSuppressed;
 
-		/// <summary>Slams that drove an arrow deeper through FletchWounds. At most one per slam.</summary>
-		internal static int ArrowProcs;
-
 		internal static void Reset()
 		{
 			ClosesChecked = 0;
@@ -37,7 +34,7 @@ namespace DoorSlammer
 			DoorsDamaged = 0;
 			DoorsSpared = 0;
 			RageSuppressed = 0;
-			ArrowProcs = 0;
+			FlavorBridges.ResetCounters();
 		}
 	}
 }

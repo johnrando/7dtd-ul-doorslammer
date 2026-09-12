@@ -109,7 +109,7 @@ namespace DoorSlammer
 			return null;
 		}
 
-		/// <summary>A loaded assembly by simple name, or null. Shared with <see cref="FletchWoundsBridge"/>.</summary>
+		/// <summary>A loaded assembly by simple name, or null. Shared with <see cref="FlavorBridge"/>.</summary>
 		internal static Assembly FindAssembly(string _simpleName)
 		{
 			Assembly[] loaded = AppDomain.CurrentDomain.GetAssemblies();

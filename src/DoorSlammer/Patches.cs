@@ -47,7 +47,7 @@ namespace DoorSlammer
 		private static void ApplyPatches()
 		{
 			UndeadLegacyInfo.Report();
-			FletchWoundsBridge.Resolve();
+			FlavorBridges.Resolve();
 
 			Harmony harmony = new Harmony(HarmonyId);
 			ApplyDoorCloseHook(harmony);
