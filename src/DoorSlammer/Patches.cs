@@ -5,13 +5,11 @@ using HarmonyLib;
 namespace DoorSlammer
 {
 	/// <summary>
-	/// Installs the mod's Harmony patches. Every patch is resolved late and gated on its own
-	/// prerequisites, so a game update that moves something degrades to a log line naming the
-	/// behaviour that is therefore missing, rather than an exception during mod init.
+	/// Installs the Harmony patches. Each is resolved late and gated on its own prerequisites, so a
+	/// game update that moves something degrades to a log line rather than an exception at init.
 	///
-	/// Load order needs no declaration. UL applies its own patches as a BepInEx plugin roughly a
-	/// second before the game calls any IModApi.InitMod, so by the time this runs both are fully
-	/// present regardless of mod folder ordering.
+	/// No load order needs declaring: UL applies its patches as a BepInEx plugin before any
+	/// IModApi.InitMod runs, and ModManager loads every mod assembly before calling any InitMod.
 	/// </summary>
 	internal static class Patches
 	{
@@ -21,11 +19,10 @@ namespace DoorSlammer
 
 		private const string NotRunYet = "not applied - mod init has not run";
 
-		/// <summary>Outcome of each patch, as reported by the <c>ds</c> console command.</summary>
+		/// <summary>Outcome of each patch, as reported by <c>ds info</c>.</summary>
 		internal static string DoorCloseHookStatus = NotRunYet;
 
 		internal static string RageSuppressionStatus = NotRunYet;
-
 
 		private static bool applied;
 
@@ -57,14 +54,11 @@ namespace DoorSlammer
 			ApplyRageSuppression(harmony);
 		}
 
-		/// <summary>
-		/// The one patch the mod cannot work without: without it nothing ever detects a door closing.
-		/// </summary>
+		/// <summary>The one patch the mod cannot work without.</summary>
 		private static void ApplyDoorCloseHook(Harmony _harmony)
 		{
-			// Declared protected in source, but the shipped Assembly-CSharp is publicized, so this
-			// resolves. No vanilla or Undead Legacy subclass overrides it, which is what lets a
-			// single patch cover every door in both.
+			// Protected in source but the shipped Assembly-CSharp is publicized. No vanilla or UL
+			// subclass overrides it, so a single patch covers every door in both.
 			MethodInfo target = AccessTools.DeclaredMethod(typeof(BlockDoor), "updateOpenCloseState");
 			if (target == null)
 			{
@@ -83,7 +77,7 @@ namespace DoorSlammer
 		}
 
 		/// <summary>
-		/// Optional, and inert until <c>ds rage</c> switches it on - but installed up front so the
+		/// Optional and inert until <c>ds rage</c> switches it on, but installed up front so the
 		/// toggle does not have to re-patch a live method mid-session.
 		/// </summary>
 		private static void ApplyRageSuppression(Harmony _harmony)
@@ -107,8 +101,8 @@ namespace DoorSlammer
 				return;
 			}
 
-			// Priority.First so this sorts ahead of Undead Legacy's rage prefix. Returning false
-			// then skips it - but only ever for our own damage source.
+			// Priority.First sorts this ahead of Undead Legacy's rage prefix so returning false can
+			// skip it - only ever for our own damage source.
 			_harmony.Patch(target, prefix: new HarmonyMethod(
 				AccessTools.DeclaredMethod(typeof(RageSuppression), nameof(RageSuppression.Prefix)))
 			{

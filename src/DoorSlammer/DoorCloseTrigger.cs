@@ -1,25 +1,31 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
 namespace DoorSlammer
 {
 	/// <summary>
-	/// Detects "a player just closed this door" by postfixing
-	/// <c>BlockDoor.updateOpenCloseState</c>, the single point every door state change is written
-	/// through. Vanilla's own door classes and all six of Undead Legacy's BlockDoor subclasses
-	/// inherit it without overriding, so one patch covers both.
+	/// Detects "a player just closed this door" by postfixing <c>BlockDoor.updateOpenCloseState</c>,
+	/// the single point every door state change is written through. Vanilla's door classes and all
+	/// six of Undead Legacy's BlockDoor subclasses inherit it without overriding.
 	///
-	/// A postfix rather than a prefix, and that matters: updateOpenCloseState finishes by calling
-	/// <c>SetBlockRPC</c> with its own local copy of the BlockValue. Block damage applied from a
-	/// prefix would carry the pre-damage value and be overwritten by that write.
+	/// A postfix rather than a prefix: updateOpenCloseState finishes by calling <c>SetBlockRPC</c>
+	/// with its own local copy of the BlockValue, so damage applied from a prefix would be
+	/// overwritten by that write.
 	/// </summary>
 	internal static class DoorCloseTrigger
 	{
 		/// <summary>Last time each door was slammed for damage, keyed on parent position.</summary>
 		private static readonly Dictionary<Vector3i, float> lastSlam = new Dictionary<Vector3i, float>();
 
+		/// <summary>Scratch list for <see cref="Prune"/>.</summary>
+		private static readonly List<Vector3i> stale = new List<Vector3i>();
+
 		/// <summary>Prune the cooldown map once it passes this many doors.</summary>
 		private const int PruneAbove = 64;
+
+		/// <summary>Never forget a door sooner than this, whatever the cooldown is set to.</summary>
+		private const float MinRetainSeconds = 30f;
 
 		internal static void Postfix(bool _bOpen, WorldBase _world, Vector3i _blockPos, int _cIdx,
 			BlockValue _blockValue, bool _bOnlyLocal)
@@ -29,26 +35,24 @@ namespace DoorSlammer
 				return;
 			}
 
-			// Only a close is a slam. OnBlockActivated computes this as !IsDoorOpen(meta), so
-			// _bOpen == false already means a genuine open-to-closed transition; there is no need
-			// to re-read the meta bit (which this method has already overwritten by now anyway).
+			// OnBlockActivated computes _bOpen as !IsDoorOpen(meta), so false already means a
+			// genuine open-to-closed transition.
 			if (_bOpen)
 			{
 				return;
 			}
 
-			// The gate that matters most. BlockDoor.OnBlockAdded calls this with _bOnlyLocal true
-			// on every chunk load and block placement - without this check, loading a save would
-			// slam every door in the world at once.
+			// BlockDoor.OnBlockAdded calls this with _bOnlyLocal true on every chunk load and block
+			// placement - without this gate, loading a save would slam every door in the world.
 			if (_bOnlyLocal)
 			{
 				return;
 			}
 
+			// Only act where we are authoritative. On a dedicated server this hook runs on the
+			// acting player's client, not the server; see ServerAuthoritative for that path.
 			if (!(_world is World world) || world.IsRemote())
 			{
-				// Only act where we are authoritative. On a dedicated server this hook runs on the
-				// acting player's client, not the server; see ServerAuthoritative for that path.
 				return;
 			}
 
@@ -64,10 +68,8 @@ namespace DoorSlammer
 			DoorSlam.Apply(world, _cIdx, parentPos);
 		}
 
-		/// <summary>
-		/// Per-door rate limit, so holding or macro-ing the activate key cannot grind damage out
-		/// frame by frame.
-		/// </summary>
+		/// <summary>Per-door rate limit, so a held or macro'd activate key cannot grind damage out
+		/// frame by frame.</summary>
 		private static bool CooldownElapsed(Vector3i _parentPos)
 		{
 			float now = Time.time;
@@ -86,14 +88,14 @@ namespace DoorSlammer
 			return true;
 		}
 
-		/// <summary>Drop doors nobody has touched recently, so a long session cannot grow this
-		/// map without bound.</summary>
+		/// <summary>Drop doors nobody has touched recently, so the map cannot grow without bound.</summary>
 		private static void Prune(float _now)
 		{
-			List<Vector3i> stale = new List<Vector3i>();
+			float retain = Math.Max(MinRetainSeconds, Settings.CooldownSeconds);
+			stale.Clear();
 			foreach (KeyValuePair<Vector3i, float> entry in lastSlam)
 			{
-				if (_now - entry.Value > 30f)
+				if (_now - entry.Value > retain)
 				{
 					stale.Add(entry.Key);
 				}
@@ -102,6 +104,7 @@ namespace DoorSlammer
 			{
 				lastSlam.Remove(stale[i]);
 			}
+			stale.Clear();
 		}
 	}
 }

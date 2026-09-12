@@ -1,65 +1,41 @@
 namespace DoorSlammer
 {
 	/// <summary>
-	/// Runtime knobs, all switchable from the <c>ds</c> console command. Everything here is cheap
-	/// to re-tune mid-session, and the interesting ones are toggles you want to flip while standing
-	/// in front of a door.
-	///
-	/// The values below are the built-in defaults, and they are what a first run writes out.
-	/// After that the player's own settings file is what loads - see <see cref="Config"/>, which
-	/// reads it over these at startup and writes it back out on every change.
+	/// Runtime knobs, all switchable from the <c>ds</c> console command. The values here are the
+	/// built-in defaults; <see cref="Config"/> reads the player's file over them at startup.
 	/// </summary>
 	internal static class Settings
 	{
 		/// <summary>Master switch. When off, the door-close hook returns immediately.</summary>
 		internal static bool Enabled = true;
 
-		/// <summary>
-		/// Suppress Undead Legacy's rage roll for slam damage only. Off by default - the roll is
-		/// UL's own behaviour and staying out of its way is the safer default. See
-		/// <see cref="RageSuppression"/> for what turning this on actually does.
-		/// </summary>
+		/// <summary>Suppress the rage roll for slam damage only. Off by default: staying out of
+		/// UL's way is the safer default. See <see cref="RageSuppression"/>.</summary>
 		internal static bool SuppressRage;
 
-		/// <summary>
-		/// Which of the game's own sounds a damaging slam plays on the door. Cycled with
-		/// <c>ds sound</c>; see <see cref="SlamSound"/> for where each name comes from.
-		/// </summary>
+		/// <summary>Which of the game's own sounds a damaging slam plays. See <see cref="SlamSound"/>.</summary>
 		internal static SlamSoundMode SoundMode = SlamSoundMode.Break;
 
-		/// <summary>HP the slam takes off the zombie.</summary>
 		internal static int DamageToZombie = 10;
 
-		/// <summary>HP the slam takes off the door.</summary>
 		internal static int DamageToDoor = 10;
 
 		/// <summary>
-		/// A slam never takes a target below this many HP remaining. It is a cap on the hit, not a
-		/// gate in front of it: a target at or below the floor is left alone, and one above it
-		/// takes at most the health it has to spare. So a slam can never land a killing blow on a
-		/// zombie or break a door open however large <see cref="DamageToZombie"/> and
-		/// <see cref="DamageToDoor"/> get. Applied to each target independently.
+		/// A slam never takes a target below this many HP. A cap on the hit, not a gate in front of
+		/// it, so a slam can never kill a zombie or break a door open however large the damage is
+		/// set. Applied to each target independently.
 		/// </summary>
 		internal static int MinRemainingHp = 20;
 
-		/// <summary>
-		/// Minimum seconds between two damaging slams of the same door. Stops a held or macro'd
-		/// activate key from turning into a damage-per-frame grinder.
-		/// </summary>
+		/// <summary>Minimum seconds between two damaging slams of the same door.</summary>
 		internal static float CooldownSeconds = 1f;
 
-		/// <summary>
-		/// How far outside the door's own block column a zombie still counts as "in the doorway",
-		/// in metres. Zombies press right up against the frame rather than standing inside it.
-		/// </summary>
+		/// <summary>How far outside the door's block column a zombie still counts as "in the
+		/// doorway", in metres. Zombies press up against the frame rather than standing inside it.</summary>
 		internal static float SearchPadding = 0.35f;
 
-		/// <summary>
-		/// Whether to take part in the extra behaviour other supported mods offer. On by default: it
-		/// does nothing at all unless one of them is installed, and the interaction it enables is one
-		/// the player has to set up on purpose. Currently just FletchWounds - see
-		/// <see cref="FletchWoundsBridge"/>. Both mods carry this switch and both have to be on.
-		/// </summary>
+		/// <summary>Take part in the extra behaviour supported mods offer. Does nothing unless one
+		/// is installed. Currently FletchWounds; both mods carry this switch and both must be on.</summary>
 		internal static bool Flavor = true;
 	}
 }

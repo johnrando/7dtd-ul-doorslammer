@@ -5,7 +5,7 @@ namespace DoorSlammer
 	/// <summary>Which of the game's own sounds a damaging slam plays, if any.</summary>
 	internal enum SlamSoundMode
 	{
-		/// <summary>Nothing extra. The door's own CloseSound still plays, as it always does.</summary>
+		/// <summary>Nothing extra. The door's own CloseSound still plays.</summary>
 		Off,
 
 		/// <summary>What a zombie's fist sounds like on this door.</summary>
@@ -16,19 +16,15 @@ namespace DoorSlammer
 	}
 
 	/// <summary>
-	/// Audio feedback for a slam that actually took HP off a door.
-	///
-	/// Nothing here is a bundled clip or a hand-written sound name: both modes look up a sound the
-	/// game already ships and already plays on this exact door, keyed on the door's own material.
-	/// So a modded door the mod has never seen still gets the right sound - and if its material
-	/// has none, silence rather than a wrong one.
+	/// Audio feedback for a slam that took HP off a door. Both modes look up a sound the game
+	/// already plays on this exact door, keyed on its material, so a modded door gets the right
+	/// sound and a material with none gets silence rather than a wrong one.
 	/// </summary>
 	internal static class SlamSound
 	{
 		/// <summary>
-		/// What the last damaging slam resolved to, reported by <c>ds info</c>. Worth reporting
-		/// because an unknown sound name fails silently by design (see Play), so this is the only
-		/// way to see which name a given door actually asked for.
+		/// What the last damaging slam resolved to, reported by <c>ds info</c>. An unknown sound
+		/// name fails silently by design, so this is the only way to see which name a door asked for.
 		/// </summary>
 		internal static string LastPlayed = "nothing yet";
 
@@ -48,30 +44,23 @@ namespace DoorSlammer
 				return;
 			}
 
-			// BroadcastPlay rather than BroadcastPlayByLocalPlayer, and the difference is the whole
-			// point: Audio.Manager.Play only calls SignalAI when the entity it is handed is an
-			// EntityPlayer, and this overload leaves _entityId at -1. So the slam is audible to the
-			// player and replicated to any other clients, but contributes no AI noise and no
-			// screamer heat - which the break sounds carry in quantity (metaldestroy is noise 20,
-			// heat_map_strength 1.42). Vanilla's own door open/close sounds do signal the AI; a
-			// slam deliberately does not, in keeping with the rest of what a slam does not do.
+			// BroadcastPlay rather than BroadcastPlayByLocalPlayer: Audio.Manager.Play only calls
+			// SignalAI when handed an EntityPlayer, and this overload leaves _entityId at -1. So the
+			// slam is audible and replicated to other clients but contributes no AI noise and no
+			// screamer heat, which the break sounds carry in quantity (metaldestroy is noise 20).
 			//
-			// An unknown sound name is not an error and not a log line: Manager.Play returns at its
-			// audioData lookup. That is what makes guessing a name off a material safe.
+			// An unknown sound name is not an error: Manager.Play returns at its audioData lookup.
 			Audio.Manager.BroadcastPlay(_parentPos.ToVector3() + Vector3.one * 0.5f, soundName);
 			LastPlayed = soundName;
 		}
 
-		/// <summary>
-		/// The sound name for this door under the current mode, or null if it has none.
-		/// </summary>
+		/// <summary>The sound name for this door under the current mode, or null if it has none.</summary>
 		private static string Resolve(Block _block)
 		{
 			if (Settings.SoundMode == SlamSoundMode.Break)
 			{
-				// A door may name its own break sound, and many do: every commercial, chainlink and
-				// sliding door carries DestroyFX "door_damage_metal,metaldestroy". Block.SpawnDestroyFX
-				// prefers it over the material for exactly this reason, so we do too.
+				// Many doors name their own break sound in DestroyFX ("door_damage_metal,metaldestroy").
+				// Block.SpawnDestroyFX prefers it over the material, so we do too.
 				string fromFX = SoundFromFX(_block.DestroyFX);
 				if (fromFX != null)
 				{
@@ -79,10 +68,9 @@ namespace DoorSlammer
 				}
 			}
 
-			// The game's own "what is this block made of, for audio" discriminator: one of wood,
-			// metal, stone, glass, cloth, earth, organic, plant, water. Undead Legacy adds no block
-			// material without one. blockMaterial rather than GetMaterialForSide because a slam has
-			// no hit face, and because it is what Block.SpawnDestroyParticleEffect uses for sound.
+			// The game's own "what is this block made of, for audio" discriminator: wood, metal,
+			// stone, glass, cloth, earth, organic, plant or water. blockMaterial rather than
+			// GetMaterialForSide because a slam has no hit face.
 			string surface = _block.blockMaterial?.SurfaceCategory;
 			if (string.IsNullOrEmpty(surface))
 			{
@@ -91,22 +79,17 @@ namespace DoorSlammer
 
 			if (Settings.SoundMode == SlamSoundMode.Break)
 			{
-				// Block.SpawnDestroyParticleEffect plays exactly this string when a block of this
-				// material is destroyed. It is also the downgrade sound: SpawnDowngradeFX falls
-				// through to the same call whenever DowngradeFX is unset, which it is on every
-				// vanilla and Undead Legacy door.
+				// What Block.SpawnDestroyParticleEffect plays when a block of this material is
+				// destroyed, and also the downgrade sound whenever DowngradeFX is unset.
 				return surface + "destroy";
 			}
 
 			// ItemActionAttack.Hit composes a block-hit sound as "{attackerMadeOf}hit{surface}", and
-			// zombie hands are meleeHandMaster with Material Morganic. So this is not an
-			// approximation of the sound a zombie makes hitting this door - it is that sound.
+			// zombie hands are Material Morganic - so this is exactly the sound a zombie makes on it.
 			return "organichit" + surface;
 		}
 
-		/// <summary>
-		/// The sound half of a block's "particle,sound" FX property, or null if it has none.
-		/// </summary>
+		/// <summary>The sound half of a block's "particle,sound" FX property, or null.</summary>
 		private static string SoundFromFX(string _fx)
 		{
 			if (string.IsNullOrEmpty(_fx))
@@ -114,8 +97,7 @@ namespace DoorSlammer
 				return null;
 			}
 
-			// Block.SpawnFX splits on the comma and indexes [1] without checking, so a malformed
-			// value throws there. Guard rather than inherit that.
+			// Block.SpawnFX indexes [1] without checking; guard rather than inherit that.
 			string[] parts = _fx.Split(',');
 			if (parts.Length < 2 || parts[1].Length == 0)
 			{

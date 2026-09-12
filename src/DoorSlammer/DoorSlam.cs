@@ -5,20 +5,13 @@ using UnityEngine;
 namespace DoorSlammer
 {
 	/// <summary>
-	/// The effect itself: one door has just been slammed shut, so find at most one zombie caught in
-	/// the doorway and chip a little health off it and off the door.
-	///
-	/// This is deliberately the only place the damage lives. <see cref="DoorCloseTrigger"/> decides
-	/// *when* a slam happened; everything about *what* a slam does is here, so the scaffolded
-	/// server-authoritative trigger in <see cref="ServerAuthoritative"/> can reuse it unchanged.
-	///
-	/// That includes the one thing a slam does not do by itself: <see cref="FletchWoundsBridge"/>
-	/// hands the caught zombie to FletchWounds, if it is installed, so an arrow already stuck in
-	/// that zombie gets driven deeper too.
+	/// The effect itself: a door has just been slammed shut, so find at most one zombie caught in
+	/// the doorway and chip health off it and off the door. <see cref="DoorCloseTrigger"/> decides
+	/// when a slam happened; everything about what a slam does lives here.
 	/// </summary>
 	internal static class DoorSlam
 	{
-		/// <summary>Reused across calls; the query overloads that return a list hand back a shared
+		/// <summary>Reused across calls: the list-returning query overloads hand back a shared
 		/// buffer that the next caller clears, so we own ours.</summary>
 		private static readonly List<Entity> candidates = new List<Entity>();
 
@@ -30,41 +23,31 @@ namespace DoorSlammer
 			EntityAlive zombie = FindSingleZombie(_world, _parentPos);
 			if (zombie == null)
 			{
-				// Nothing caught, so nothing happened: the door does not wear down from ordinary use.
 				return;
 			}
 
 			Counters.Slams++;
 			DamageZombie(zombie, _parentPos);
 
-			// Outside DamageZombie rather than inside it, and that is the decision: DamageZombie
-			// caps itself at the never-kill floor, and an arrow is allowed past it. The floor is a
-			// rule about what a door may do, not about what your own ammunition may do once the door
-			// drives it deeper. So this is the one part of a slam that can land a killing blow, and
-			// the only way a zombie ever dies to one. Inert unless FletchWounds is installed.
+			// Outside DamageZombie on purpose: the never-kill floor is a rule about what a door may
+			// do, not about what the player's own arrow may do once the door drives it deeper. This
+			// is the only part of a slam that can land a killing blow. Inert without FletchWounds.
 			FletchWoundsBridge.TryProc(_world, zombie);
 
 			DamageDoor(_world, _clrIdx, _parentPos);
 		}
 
-		/// <summary>
-		/// The one zombie standing in the doorway, or null. "At most one" is a hard requirement, so
-		/// this returns the single nearest rather than everything overlapping.
-		/// </summary>
+		/// <summary>The single nearest zombie standing in the doorway, or null.</summary>
 		private static EntityAlive FindSingleZombie(World _world, Vector3i _parentPos)
 		{
-			// Doors default to MultiBlockDim 1,2,1 with the parent as the lower block, so the column
-			// spans parentPos.y and parentPos.y + 1 - centre is one block up from the parent's floor.
-			Vector3 center = new Vector3(_parentPos.x + 0.5f, _parentPos.y + 1f, _parentPos.z + 0.5f);
-			Bounds bb = new Bounds(center, new Vector3(1f, 2f, 1f));
+			Bounds bb = DoorwayBounds(_world, _parentPos);
 			bb.Expand(Settings.SearchPadding * 2f);
+			Vector3 center = bb.center;
 
 			candidates.Clear();
 
-			// (entityFlags & mask) == flags, so passing Zombie for both filters to zombies only.
-			// EntityFlags comes from entityclasses.xml, which makes this the right discriminator
-			// rather than 'is EntityZombie': it covers zombie dogs (an EntityEnemyAnimal, not an
-			// EntityZombie), excludes bandits, and picks up UL-added zombies for free.
+			// (entityFlags & mask) == flags. EntityFlags comes from entityclasses.xml, so unlike
+			// 'is EntityZombie' it covers zombie dogs, excludes bandits, and picks up UL's zombies.
 			_world.GetEntitiesAround(EntityFlags.Zombie, EntityFlags.Zombie, center,
 				bb.extents.magnitude, candidates);
 
@@ -92,17 +75,46 @@ namespace DoorSlammer
 			return best;
 		}
 
+		/// <summary>
+		/// The world-space box every block of the door occupies, in its placed rotation. A plain door
+		/// is 1x2x1 above its parent, but closet and commercial double doors are two wide, cellar
+		/// doors two deep and garage doors wider still; a fixed single column missed anything caught
+		/// in the other leaf.
+		/// </summary>
+		private static Bounds DoorwayBounds(World _world, Vector3i _parentPos)
+		{
+			Vector3i min = _parentPos;
+			Vector3i max = _parentPos;
+
+			BlockValue blockValue = _world.GetBlock(_parentPos);
+			Block block = blockValue.isair ? null : blockValue.Block;
+			if (block != null && block.isMultiBlock && block.multiBlockPos != null)
+			{
+				// Get() applies the shape's rotation to the layout offset, the same way AddChilds
+				// places the child blocks, so this is exactly the set of cells the door fills.
+				for (int i = 0; i < block.multiBlockPos.Length; i++)
+				{
+					Vector3i cell = _parentPos + block.multiBlockPos.Get(i, blockValue.type, blockValue.rotation);
+					min = Vector3i.Min(min, cell);
+					max = Vector3i.Max(max, cell);
+				}
+			}
+			else
+			{
+				// Block unreadable or not a multiblock: fall back to the classic 1x2x1 door column.
+				max.y += 1;
+			}
+
+			Bounds bb = new Bounds();
+			bb.SetMinMax(min.ToVector3(), (max + Vector3i.one).ToVector3());
+			return bb;
+		}
+
 		private static void DamageZombie(EntityAlive _zombie, Vector3i _parentPos)
 		{
-			// The never-kill floor, applied as a cap on the hit rather than as a gate in front of
-			// it. As a gate it only held while the damage was no larger than the floor: 'ds dmg 100'
-			// against 'ds floor 10' let anything above 10 HP take the whole 100 and die, which is
-			// the one thing the floor is named for stopping. Capping to the headroom instead makes
-			// it mean what it says at any 'ds dmg' - the zombie lands on the floor rather than
-			// through it, and the next slam finds nothing left to take.
-			//
-			// A slam whittles a zombie down and then stops; finishing it takes a real hit.
-			// Uncredited damage would grant no XP for the kill anyway.
+			// The never-kill floor is a cap on the hit, not a gate in front of it: the zombie lands
+			// on the floor rather than through it at any 'ds dmg', and the next slam finds nothing
+			// left to take.
 			int headroom = _zombie.Health - Settings.MinRemainingHp;
 			if (headroom <= 0)
 			{
@@ -117,18 +129,15 @@ namespace DoorSlammer
 					DismemberChance = 0f
 				};
 
-			// _impulseScale 0 suppresses knockback. With Strength 1 and a non-Bashing damage type
-			// the PainHit test (Strength + ArmorDamage / 2 >= 6) also fails, so there is no
-			// hit-reaction animation either.
+			// _impulseScale 0 suppresses knockback. With Strength 1 and a non-Bashing type the
+			// PainHit test (Strength + ArmorDamage / 2 >= 6) fails too, so no hit reaction either.
 			//
-			// Note we deliberately do NOT call SetIgnoreConsecutiveDamages: its throttle is keyed
-			// only on EnumDamageSource, of which there are two values, so it would collide with
-			// unrelated damage in both directions. DoorCloseTrigger's per-door cooldown does that job.
+			// Deliberately no SetIgnoreConsecutiveDamages: its throttle is keyed on EnumDamageSource
+			// alone and would collide with unrelated damage. The per-door cooldown does that job.
 			int applied = _zombie.DamageEntity(damageSource, Math.Min(Settings.DamageToZombie, headroom),
 				_criticalHit: false, _impulseScale: 0f);
 
-			// -1 means the hit was rejected outright rather than merely absorbed, so the counter
-			// only moves when the damage really reached the zombie.
+			// -1 means rejected outright rather than merely absorbed.
 			if (applied >= 0)
 			{
 				Counters.ZombiesHit++;
@@ -138,7 +147,7 @@ namespace DoorSlammer
 		private static void DamageDoor(World _world, int _clrIdx, Vector3i _parentPos)
 		{
 			// Read the block back rather than trusting the value passed into the close, so the
-			// damage is applied on top of the state the close just wrote.
+			// damage lands on top of the state the close just wrote.
 			BlockValue blockValue = _world.GetBlock(_parentPos);
 			if (blockValue.isair)
 			{
@@ -151,8 +160,6 @@ namespace DoorSlammer
 				return;
 			}
 
-			// Same floor as the zombie, capped the same way: slamming wears a door down to the floor
-			// and never through it, whatever 'ds dmg' asks for.
 			int headroom = block.MaxDamage - blockValue.damage - Settings.MinRemainingHp;
 			if (headroom <= 0)
 			{
@@ -160,24 +167,23 @@ namespace DoorSlammer
 				return;
 			}
 
+			// Mirrors what vanilla BlockDamage does before damaging a block.
 			if (_world.IsWithinTraderArea(_parentPos))
 			{
-				// Mirrors what vanilla BlockDamage does before damaging a block.
 				Counters.DoorsSpared++;
 				return;
 			}
 
-			// _entityIdThatDamaged -1 keeps the hit unattributed, which also suppresses Undead
-			// Legacy's floating damage number. Block.OnBlockDamaged handles the multiblock
-			// child-to-parent redirect and replicates the new damage value itself.
+			// _entityIdThatDamaged -1 keeps the hit unattributed, which also suppresses UL's floating
+			// damage number. Block.OnBlockDamaged handles the multiblock child-to-parent redirect
+			// and replicates the new damage value itself.
 			block.DamageBlock(_world, _clrIdx, _parentPos, blockValue,
 				Math.Min(Settings.DamageToDoor, headroom),
 				_entityIdThatDamaged: -1, _attackHitInfo: null, _bUseHarvestTool: false,
 				_bBypassMaxDamage: false);
 			Counters.DoorsDamaged++;
 
-			// Only once the door has really taken HP, so a slam that is spared by the floor or by
-			// the trader-area check stays as silent as it is harmless.
+			// Only once the door has really taken HP, so a spared slam stays silent.
 			SlamSound.Play(_parentPos, block);
 		}
 	}

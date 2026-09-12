@@ -6,22 +6,12 @@ namespace DoorSlammer
 {
 	/// <summary>
 	/// The optional other half of a slam: if FletchWounds is installed, a slam that catches a
-	/// zombie with one of the player's arrows still in it drives that arrow deeper.
+	/// zombie with one of the player's arrows in it drives that arrow deeper.
 	///
-	/// Resolved by reflection rather than referenced, because either mod has to work with the other
-	/// absent and a reference would make one require the other. FletchWounds publishes two methods
-	/// for this - the proc itself and a flavor setter, bound independently so a build carrying only
-	/// one still gets that half. Every parameter is a game type, so neither assembly needs a type
-	/// from the other, and each is bound once into a delegate so the call site pays no reflection
-	/// cost per slam.
-	///
-	/// Load order needs no declaration, for a reason worth writing down: <c>ModManager.LoadMods</c>
-	/// loads every mod's assembly in its folder-scan pass and only then walks the list again calling
-	/// InitModCode, so by the time any IModApi.InitMod runs, every mod is already in the AppDomain.
-	/// Alphabetical folder order cannot put us in front of it.
-	///
-	/// Every failure degrades to a log line and an inert bridge. Slams keep working; they just stop
-	/// being interesting.
+	/// Resolved by reflection rather than referenced, so either mod works with the other absent.
+	/// FletchWounds publishes two methods - the proc and a flavor setter - bound independently, in
+	/// game types only, each into a delegate so a slam pays no reflection cost. Every failure
+	/// degrades to a log line and an inert bridge.
 	/// </summary>
 	internal static class FletchWoundsBridge
 	{
@@ -41,9 +31,7 @@ namespace DoorSlammer
 
 		private static Func<EntityAlive, EntityAlive, bool> proc;
 
-		/// <summary>Whether the assembly was there at all, as opposed to there but unusable. Kept
-		/// as its own flag rather than inferred from <see cref="Status"/>, which is prose meant
-		/// for a human.</summary>
+		/// <summary>Whether the assembly was there at all, as opposed to there but unusable.</summary>
 		private static bool found;
 
 		/// <summary>FletchWounds' own flavor setter, bound the same way it binds ours.</summary>
@@ -51,7 +39,7 @@ namespace DoorSlammer
 
 		internal static void Resolve()
 		{
-			Assembly assembly = FindAssembly(AssemblyName);
+			Assembly assembly = UndeadLegacyInfo.FindAssembly(AssemblyName);
 			found = assembly != null;
 			if (assembly == null)
 			{
@@ -94,8 +82,7 @@ namespace DoorSlammer
 		}
 
 		/// <summary>
-		/// Binds FletchWounds' flavor setter so <c>ds flavor</c> can move both switches at once.
-		/// Optional, and separately so: a build whose TryProc binds but whose SetFlavor does not
+		/// Optional, and bound separately: a build whose TryProc binds but whose SetFlavor does not
 		/// still gets the interaction, the player just has to set the other switch themselves.
 		/// </summary>
 		private static Action<bool> BindFlavorSetter(Type _type)
@@ -111,8 +98,9 @@ namespace DoorSlammer
 		}
 
 		/// <summary>
-		/// Mirror this mod's flavor setting onto every supported mod that is listening. Called only
-		/// from the console command - the player toggled it here, so here is where it propagates.
+		/// Mirror this mod's flavor setting onto FletchWounds. Called only from the console command:
+		/// whoever the player typed at owns the propagation, which is what stops the two mods
+		/// calling each other forever.
 		/// </summary>
 		internal static void PushFlavor(bool _on)
 		{
@@ -134,8 +122,7 @@ namespace DoorSlammer
 		}
 
 		/// <summary>
-		/// Called on every slam that caught a zombie - including one the never-kill floor spared,
-		/// because an arrow is not the door and is allowed to finish the job.
+		/// Called on every slam that caught a zombie, including one the never-kill floor spared.
 		/// </summary>
 		internal static void TryProc(World _world, EntityAlive _zombie)
 		{
@@ -144,15 +131,10 @@ namespace DoorSlammer
 				return;
 			}
 
-			// Who slammed the door. updateOpenCloseState carries no player argument, but
-			// DoorCloseTrigger has already established that we are the authoritative, non-remote
-			// machine, and the whole door-activation path runs on the machine of the player who
-			// pressed the key - see ServerAuthoritative for the analysis. So the primary player is
-			// the one who closed it. FletchWounds' own arrow-pull hook attributes the same way.
-			//
-			// On the dedicated-server scaffold there is no primary player, this returns null, and
-			// the proc is skipped - which is the honest outcome given that path's attribution
-			// problem is the one ServerAuthoritative already documents as unsolved.
+			// updateOpenCloseState carries no player argument, but the whole door-activation path
+			// runs on the machine of the player who pressed the key (see ServerAuthoritative), so
+			// the primary player is the one who closed it. On a dedicated server this is null and
+			// the proc is skipped.
 			EntityPlayerLocal player = _world.GetPrimaryPlayer();
 			if (player == null || player.IsDead())
 			{
@@ -168,27 +150,13 @@ namespace DoorSlammer
 			}
 			catch (Exception e)
 			{
-				// The far side of a boundary that can be updated independently of this mod. One
-				// throw retires the bridge rather than repeating itself on every future slam.
+				// One throw retires the bridge rather than repeating on every future slam.
 				proc = null;
 				Status = "installed, but the call threw - bridge retired for this session";
 				Log.Error(Patches.LogPrefix + Label + " threw during a slam; arrow procs are off for "
 					+ "the rest of this session. Slams themselves are unaffected.");
 				Log.Exception(e);
 			}
-		}
-
-		private static Assembly FindAssembly(string _simpleName)
-		{
-			Assembly[] loaded = AppDomain.CurrentDomain.GetAssemblies();
-			for (int i = 0; i < loaded.Length; i++)
-			{
-				if (string.Equals(loaded[i].GetName().Name, _simpleName, StringComparison.OrdinalIgnoreCase))
-				{
-					return loaded[i];
-				}
-			}
-			return null;
 		}
 
 		/// <summary>The line <c>ds flavor</c> prints after toggling.</summary>
@@ -205,9 +173,7 @@ namespace DoorSlammer
 
 			if (proc == null)
 			{
-				// Installed but unbound is a different thing from absent, and worth saying so: the
-				// first is a version mismatch somebody can act on, the second is just a mod they do
-				// not have.
+				// Installed-but-unbound is a version mismatch somebody can act on; absent is not.
 				return found
 					? "Flavor ON - but " + Label + " could not be bound, so nothing changes. See 'ds info'."
 					: "Flavor ON - but no mod that hooks into it is installed, so nothing changes.";

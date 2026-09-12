@@ -6,18 +6,11 @@ using System.Text;
 namespace DoorSlammer
 {
 	/// <summary>
-	/// Reads <see cref="Settings"/> back at startup and writes it out again whenever a <c>ds</c>
-	/// command changes something, so a tuned mod stays tuned across a restart.
-	///
-	/// The file lives in the game's own user data folder rather than in <c>Mods/DoorSlammer/</c>,
-	/// which is the difference between settings that survive an update of the mod and settings that
-	/// get overwritten by one. It is plain <c>key = value</c> text on purpose: no XML reference to
-	/// add, nothing to get wrong in an editor, and every line names the console command that writes
-	/// it, so the file reads like the menu it came from.
-	///
-	/// Nothing here can stop the mod working. A folder that will not resolve, a file that will not
-	/// parse and a disk that will not take the write all degrade to a log line and the defaults,
-	/// which is what <c>ds info</c> reports on its "settings file" line.
+	/// Reads <see cref="Settings"/> back at startup and writes it out whenever a <c>ds</c> command
+	/// changes something. The file lives in the game's user data folder rather than in the mod
+	/// folder, so it survives a mod update. Plain <c>key = value</c> text; every line names the
+	/// console command that writes it. Nothing here can stop the mod working: any failure degrades
+	/// to a log line and the defaults.
 	/// </summary>
 	internal static class Config
 	{
@@ -32,16 +25,9 @@ namespace DoorSlammer
 		private static string filePath;
 
 		/// <summary>
-		/// Set for as long as <see cref="Load"/> is applying lines, so the setters it goes through
-		/// do not write the file back out one line at a time while reading it.
-		/// </summary>
-		private static bool loading;
-
-		/// <summary>
-		/// Called once from <see cref="ModApi.InitMod"/>, before the patches go in - the rage patch
-		/// logs which way its switch is set, and that should be the player's setting rather than
-		/// the built-in one. A missing file is not an error: it is a first run, and writing the
-		/// defaults out is what makes the file discoverable at all.
+		/// Called once from <see cref="ModApi.InitMod"/>, before the patches go in, so the startup
+		/// log reports the player's settings rather than the defaults. A missing file is a first
+		/// run: writing the defaults out is what makes the file discoverable.
 		/// </summary>
 		internal static void Load()
 		{
@@ -58,7 +44,6 @@ namespace DoorSlammer
 
 			try
 			{
-				loading = true;
 				int applied = 0;
 				int rejected = 0;
 				foreach (string line in File.ReadAllLines(filePath))
@@ -85,21 +70,15 @@ namespace DoorSlammer
 				Log.Warning(Patches.LogPrefix + "Could not read " + filePath + ", so the built-in "
 					+ "defaults are in force: " + e.Message);
 			}
-			finally
-			{
-				loading = false;
-			}
 		}
 
 		/// <summary>
-		/// Called by every <c>ds</c> command that changes a setting, and by
-		/// <see cref="FlavorInterop.SetFlavor"/> when the other mod moves the flavor switch. Writes
-		/// the whole file rather than the one line that changed, which is what keeps the comments
-		/// and the ordering intact.
+		/// Writes the whole file, which is what keeps the comments and ordering intact. Called by
+		/// every <c>ds</c> command that changes a setting and by <see cref="FlavorInterop.SetFlavor"/>.
 		/// </summary>
 		internal static void Save()
 		{
-			if (loading || !Resolve())
+			if (!Resolve())
 			{
 				return;
 			}
@@ -118,10 +97,7 @@ namespace DoorSlammer
 			}
 		}
 
-		/// <summary>
-		/// Works out where the file goes, once. Failure here is the one case that leaves the mod
-		/// with no persistence at all, so it says so plainly rather than retrying every command.
-		/// </summary>
+		/// <summary>Works out where the file goes, once.</summary>
 		private static bool Resolve()
 		{
 			if (filePath != null)
@@ -149,7 +125,6 @@ namespace DoorSlammer
 			}
 		}
 
-		/// <summary>The file, exactly as it is written every time.</summary>
 		private static string Compose()
 		{
 			StringBuilder text = new StringBuilder();
@@ -181,7 +156,7 @@ namespace DoorSlammer
 
 		private enum LineResult
 		{
-			/// <summary>Blank or a comment - not a setting, and not a complaint either.</summary>
+			/// <summary>Blank or a comment.</summary>
 			Skipped,
 
 			Applied,
@@ -190,9 +165,8 @@ namespace DoorSlammer
 		}
 
 		/// <summary>
-		/// One line of the file. An unknown key is a warning rather than an error: it is what a
-		/// file written by a newer version of the mod looks like to an older one, and dropping the
-		/// line it does not understand is better than refusing the eight it does.
+		/// One line of the file. An unknown key is a warning rather than an error: that is what a
+		/// file written by a newer version of the mod looks like to an older one.
 		/// </summary>
 		private static LineResult Parse(string _line)
 		{
@@ -230,9 +204,9 @@ namespace DoorSlammer
 			case "enabled":
 				return TryBool(_value, ref Settings.Enabled);
 			case "damage.zombie":
-				return TryCount(_value, ref Settings.DamageToZombie);
+				return LoadCount(_value, ref Settings.DamageToZombie);
 			case "damage.door":
-				return TryCount(_value, ref Settings.DamageToDoor);
+				return LoadCount(_value, ref Settings.DamageToDoor);
 			case "sound":
 				return TrySound(_value);
 			case "rage":
@@ -240,20 +214,17 @@ namespace DoorSlammer
 			case "flavor":
 				return TryBool(_value, ref Settings.Flavor);
 			case "floor":
-				return TryCount(_value, ref Settings.MinRemainingHp);
+				return LoadCount(_value, ref Settings.MinRemainingHp);
 			case "cooldown":
-				return TryMeasure(_value, ref Settings.CooldownSeconds);
+				return LoadMeasure(_value, ref Settings.CooldownSeconds);
 			case "range":
-				return TryMeasure(_value, ref Settings.SearchPadding);
+				return LoadMeasure(_value, ref Settings.SearchPadding);
 			default:
 				return false;
 			}
 		}
 
-		/// <summary>
-		/// Accepts what the file itself writes, and the obvious synonyms a player would reach for
-		/// editing it by hand.
-		/// </summary>
+		/// <summary>Accepts what the file writes plus the obvious hand-edit synonyms.</summary>
 		private static bool TryBool(string _value, ref bool _target)
 		{
 			switch (_value.ToLowerInvariant())
@@ -275,11 +246,16 @@ namespace DoorSlammer
 			}
 		}
 
-		/// <summary>The same range the console command accepts: whole numbers of HP, zero or more.</summary>
-		private static bool TryCount(string _value, ref int _target)
+		/// <summary>Whole numbers of HP, zero or more. Shared with the console command.</summary>
+		internal static bool TryCount(string _value, out int _parsed)
 		{
-			if (!int.TryParse(_value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed)
-				|| parsed < 0)
+			return int.TryParse(_value, NumberStyles.Integer, CultureInfo.InvariantCulture, out _parsed)
+				&& _parsed >= 0;
+		}
+
+		private static bool LoadCount(string _value, ref int _target)
+		{
+			if (!TryCount(_value, out int parsed))
 			{
 				return false;
 			}
@@ -288,15 +264,19 @@ namespace DoorSlammer
 		}
 
 		/// <summary>
-		/// Seconds or metres, zero or more, read against the invariant culture so a file written on
-		/// one machine means the same thing on a machine whose decimal separator is a comma.
+		/// Seconds or metres, zero or more, against the invariant culture so a file written on one
+		/// machine means the same on one whose decimal separator is a comma. Shared with the console
+		/// command. <c>!(x &gt;= 0)</c> rather than <c>x &lt; 0</c> so NaN is rejected too.
 		/// </summary>
-		private static bool TryMeasure(string _value, ref float _target)
+		internal static bool TryMeasure(string _value, out float _parsed)
 		{
-			// !(x >= 0f) rather than x < 0f, because NaN parses successfully and then fails every
-			// comparison - a plain "less than zero" test would wave it through.
-			if (!float.TryParse(_value, NumberStyles.Float, CultureInfo.InvariantCulture, out float parsed)
-				|| !(parsed >= 0f) || float.IsInfinity(parsed))
+			return float.TryParse(_value, NumberStyles.Float, CultureInfo.InvariantCulture, out _parsed)
+				&& _parsed >= 0f && !float.IsInfinity(_parsed);
+		}
+
+		private static bool LoadMeasure(string _value, ref float _target)
+		{
+			if (!TryMeasure(_value, out float parsed))
 			{
 				return false;
 			}
@@ -327,8 +307,8 @@ namespace DoorSlammer
 			return _on ? "on" : "off";
 		}
 
-		/// <summary>Written the way the console command parses it, so the two agree.</summary>
-		private static string Number(float _value)
+		/// <summary>Written the way it is parsed, so a reported value can be typed back in.</summary>
+		internal static string Number(float _value)
 		{
 			return _value.ToString(CultureInfo.InvariantCulture);
 		}

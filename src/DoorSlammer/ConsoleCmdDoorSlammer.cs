@@ -1,28 +1,11 @@
 using System.Collections.Generic;
-using System.Globalization;
 
 namespace DoorSlammer
 {
 	/// <summary>
-	/// <c>ds</c> (or <c>doorslammer</c>) - prints the settings block and changes nothing.
-	/// <c>ds on</c> and <c>ds off</c> are the master switch; <c>ds sound</c> cycles the slam sound;
-	/// <c>ds rage</c> and <c>ds flavor</c> toggle; <c>ds dmg</c>, <c>ds floor</c> and
-	/// <c>ds tuning</c> set the numbers. <c>ds info</c> prints the diagnostics and counters,
-	/// <c>ds reset</c> zeroes them.
-	///
-	/// The bare command reports rather than acts, and that is the point of it: it is what a player
-	/// types to find out where things stand, so it must never be the thing that changed the answer.
-	/// Everything that changes something has to name the change.
-	///
-	/// The settings block doubles as the menu: every line names the command that changes it, and
-	/// shows what that command left behind. The switches list their choices with the live one
-	/// marked and say what they do, so the block is also the answer to "what can I set this to".
-	///
-	/// It is kept short on purpose - it is what you read while standing in front of a door.
-	/// Everything that answers "is this thing working" lives in <c>ds info</c> instead: the startup
-	/// log proves the patches were installed, but only a non-zero counter proves a door close is
-	/// reaching them, and the breakdown is what tells you which gate a slam died on when it looks
-	/// like nothing is happening.
+	/// <c>ds</c> (or <c>doorslammer</c>). The bare command prints the settings block and changes
+	/// nothing; every line of the block names the command that changes it, so it doubles as the
+	/// menu. <c>ds info</c> adds the diagnostics and counters that answer "is this thing working".
 	/// </summary>
 	public class ConsoleCmdDoorSlammer : ConsoleCmdAbstract
 	{
@@ -92,10 +75,6 @@ namespace DoorSlammer
 			}
 		}
 
-		/// <summary>
-		/// The menu. <paramref name="_header"/> is what separates <c>ds on</c> from a bare
-		/// <c>ds</c>: one has just changed something and the other has not.
-		/// </summary>
 		private static void OutputMenu(string _header)
 		{
 			Output(_header);
@@ -108,10 +87,8 @@ namespace DoorSlammer
 			Line("ds tuning {cd} {dist}", TuningLine());
 		}
 
-		/// <summary>
-		/// <c>ds on</c> / <c>ds off</c>. The header says whether anything actually moved, because
-		/// typing the state you were already in is not an error and should not read like a change.
-		/// </summary>
+		/// <summary>The header says whether anything moved: typing the state you were already in
+		/// should not read like a change.</summary>
 		private static void SetEnabled(bool _on)
 		{
 			bool changed = Settings.Enabled != _on;
@@ -154,25 +131,13 @@ namespace DoorSlammer
 			}
 		}
 
-		/// <summary>
-		/// One line of the block. Every label is padded to the width of the longest one -
-		/// "ds tuning {cd} {dist}" - so the settings and the read-only lines share a column and
-		/// <c>ds info</c> reads as one block rather than two.
-		/// </summary>
+		/// <summary>Labels padded to the longest one ("ds tuning {cd} {dist}") so the block shares a column.</summary>
 		private static void Line(string _label, string _value)
 		{
 			Output("  " + _label.PadRight(22) + ": " + _value);
 		}
 
-		/// <summary>
-		/// A line for a switch: the choices, then what the switch is for. The choice list is padded
-		/// to the width of the longest one - "ds sound"'s three - so the notes line up in a column
-		/// of their own instead of starting wherever the marked option happened to end.
-		///
-		/// A setter has no note, because its value already reads as one: "1 to zombie / 10 to door"
-		/// says what "ds dmg" does. A switch shows "[ off | >impact< | break ]", which says what it
-		/// can be set to and nothing at all about what setting it does.
-		/// </summary>
+		/// <summary>A switch line: the choices padded to the widest set, then what the switch is for.</summary>
 		private static void Switch(string _label, string _choices, string _note)
 		{
 			Line(_label, _choices.PadRight(26) + " - " + _note);
@@ -236,35 +201,25 @@ namespace DoorSlammer
 			Output("Tuning: " + TuningLine());
 		}
 
-		/// <summary>A whole number of HP, zero or more. Zero is allowed: it disables that gate.</summary>
+		/// <summary>Zero is allowed: it disables that gate.</summary>
 		private static bool TryCount(string _value, string _what, out int _parsed)
 		{
-			if (!int.TryParse(_value, NumberStyles.Integer, CultureInfo.InvariantCulture, out _parsed)
-				|| _parsed < 0)
+			if (Config.TryCount(_value, out _parsed))
 			{
-				Output("'" + _value + "' is not a valid " + _what + " - whole numbers from 0 up.");
-				_parsed = 0;
-				return false;
+				return true;
 			}
-			return true;
+			Output("'" + _value + "' is not a valid " + _what + " - whole numbers from 0 up.");
+			return false;
 		}
 
-		/// <summary>
-		/// Seconds or metres, zero or more. Parsed against the invariant culture rather than the
-		/// player's, so "0.35" means the same thing on a machine whose decimal separator is a comma.
-		/// </summary>
 		private static bool TryMeasure(string _value, string _what, out float _parsed)
 		{
-			// !(x >= 0f) rather than x < 0f, because NaN parses successfully and then fails every
-			// comparison - a plain "less than zero" test would wave it through.
-			if (!float.TryParse(_value, NumberStyles.Float, CultureInfo.InvariantCulture, out _parsed)
-				|| !(_parsed >= 0f) || float.IsInfinity(_parsed))
+			if (Config.TryMeasure(_value, out _parsed))
 			{
-				Output("'" + _value + "' is not a valid " + _what + " - numbers from 0 up, like 0.35.");
-				_parsed = 0f;
-				return false;
+				return true;
 			}
-			return true;
+			Output("'" + _value + "' is not a valid " + _what + " - numbers from 0 up, like 0.35.");
+			return false;
 		}
 
 		/// <summary>The choice list for a cycle or toggle, with the live value marked.</summary>
@@ -296,11 +251,6 @@ namespace DoorSlammer
 			return Choices(Mark("off", !Settings.SuppressRage), Mark("on", Settings.SuppressRage));
 		}
 
-		/// <summary>
-		/// The one menu line whose note names something outside this mod, so its note is not a
-		/// fixed string but what the lookup found: an interaction is not worth toggling if there
-		/// is nothing to interact with. See <see cref="FletchWoundsBridge.FlavorSummary"/>.
-		/// </summary>
 		private static string FlavorChoices()
 		{
 			return Choices(Mark("on", Settings.Flavor), Mark("off", !Settings.Flavor));
@@ -319,14 +269,8 @@ namespace DoorSlammer
 
 		private static string TuningLine()
 		{
-			return Number(Settings.CooldownSeconds) + " sec cooldown / "
-				+ Number(Settings.SearchPadding) + " range";
-		}
-
-		/// <summary>Printed the same way it is parsed, so a reported value can be typed back in.</summary>
-		private static string Number(float _value)
-		{
-			return _value.ToString(CultureInfo.InvariantCulture);
+			return Config.Number(Settings.CooldownSeconds) + " sec cooldown / "
+				+ Config.Number(Settings.SearchPadding) + " range";
 		}
 
 		private static void Output(string _line)

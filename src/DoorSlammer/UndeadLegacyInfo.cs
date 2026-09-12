@@ -7,14 +7,11 @@ namespace DoorSlammer
 {
 	/// <summary>
 	/// Detects whether Undead Legacy is loaded and which build it is. Purely advisory: this mod
-	/// patches only vanilla types, so nothing here gates anything, and the mod works standalone.
-	///
-	/// It is worth reporting anyway, because UL is what makes the rage toggle meaningful - UL rolls
-	/// a rage chance on every damage response, vanilla only does so on its own terms.
+	/// patches only vanilla types, so nothing here gates anything.
 	///
 	/// Of UL's version markers only the ones on <c>H_UndeadLegacy</c> are trustworthy: the
 	/// <c>[BepInPlugin]</c> attribute and the <c>pluginVersion</c> literal. UL's assembly version is
-	/// hardcoded 1.0.0.0 and its ModInfo.xml lags reality - it reads 2.7.01 on a 2.7.24 install.
+	/// hardcoded 1.0.0.0 and its ModInfo.xml lags reality.
 	/// </summary>
 	internal static class UndeadLegacyInfo
 	{
@@ -112,7 +109,8 @@ namespace DoorSlammer
 			return null;
 		}
 
-		private static Assembly FindAssembly(string _simpleName)
+		/// <summary>A loaded assembly by simple name, or null. Shared with <see cref="FletchWoundsBridge"/>.</summary>
+		internal static Assembly FindAssembly(string _simpleName)
 		{
 			Assembly[] loaded = AppDomain.CurrentDomain.GetAssemblies();
 			for (int i = 0; i < loaded.Length; i++)

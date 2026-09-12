@@ -1,34 +1,31 @@
 namespace DoorSlammer
 {
 	/// <summary>
-	/// Live counters behind the <c>ds</c> command. The startup log only proves the patches were
-	/// installed; these are what prove they are being reached, and which gate a slam died on.
-	///
-	/// No locking: all writes happen on the main thread, from the door-activation path.
+	/// Live counters behind <c>ds info</c>: the startup log proves the patches were installed,
+	/// these prove they are being reached and which gate a slam died on. No locking: all writes
+	/// happen on the main thread.
 	/// </summary>
 	internal static class Counters
 	{
 		/// <summary>Door closes that passed every gate, including the per-door cooldown.</summary>
 		internal static int ClosesChecked;
 
-		/// <summary>Of those, the ones that actually caught a zombie in the doorway.</summary>
+		/// <summary>Of those, the ones that caught a zombie in the doorway.</summary>
 		internal static int Slams;
 
 		internal static int ZombiesHit;
 
-		/// <summary>Zombies caught but at or below the never-kill floor, so left alone.</summary>
+		/// <summary>Zombies caught but at or below the never-kill floor.</summary>
 		internal static int ZombiesSpared;
 
 		internal static int DoorsDamaged;
 
-		/// <summary>Doors left alone: at or below the floor, or inside a trader area.</summary>
+		/// <summary>Doors at or below the floor, or inside a trader area.</summary>
 		internal static int DoorsSpared;
 
-		/// <summary>Slam hits whose damage response skipped the rage roll.</summary>
 		internal static int RageSuppressed;
 
-		/// <summary>Slams that drove an arrow deeper through FletchWounds. At most one per slam,
-		/// and always zero without that mod installed.</summary>
+		/// <summary>Slams that drove an arrow deeper through FletchWounds. At most one per slam.</summary>
 		internal static int ArrowProcs;
 
 		internal static void Reset()

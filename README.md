@@ -133,13 +133,18 @@ back the defaults above (which live in `Settings.cs`).
 ## Undead Legacy
 
 **Not required** — the mod works fine on a plain install, and is built to sit alongside UL without
-modifying anything of UL's. Tested against **UL 2.7.24**; all of UL's ordinary doors are covered.
+modifying anything of UL's. Tested against **UL 2.7.31**; all of UL's ordinary doors are covered.
 
 **`ds rage`.** UL rolls a chance to enrage a zombie on every bit of damage it takes, however small
 — only around 0.63% per slam at UL's default, but across the many slams it takes to whittle one
 down that adds up to better than a coin flip, and a super rage brings an alert scream with it.
 `ds rage` suppresses that roll for slam damage only, leaving ordinary combat alone. Off by default.
 Without UL, it suppresses vanilla's own rage roll instead.
+
+**Wide doors count in full** — the doorway checked is the door's whole footprint in its placed
+rotation, so a zombie caught in either leaf of a double closet or commercial door, or anywhere
+under a cellar door, is fair game. Earlier builds only checked the one column above the door's
+parent block.
 
 **Powered doors are not covered** — powered vault doors, garage doors and the like.
 
