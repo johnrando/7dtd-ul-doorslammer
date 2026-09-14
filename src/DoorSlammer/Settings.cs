@@ -34,8 +34,7 @@ namespace DoorSlammer
 		/// doorway", in metres. Zombies press up against the frame rather than standing inside it.</summary>
 		internal static float SearchPadding = 0.35f;
 
-		/// <summary>Take part in the extra behaviour supported mods offer. Does nothing unless one
-		/// is installed. Currently FletchWounds; both mods carry this switch and both must be on.</summary>
-		internal static bool Flavor = true;
+		// The per-partner flavor switches live in FlavorSwitches: one per mod this one links up
+		// with, all on by default, and mirrored pairwise rather than as one shared value.
 	}
 }

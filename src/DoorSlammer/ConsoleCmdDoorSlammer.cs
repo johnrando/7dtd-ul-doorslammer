@@ -41,10 +41,7 @@ namespace DoorSlammer
 				return;
 
 			case "flavor":
-				Settings.Flavor = !Settings.Flavor;
-				Config.Save();
-				FlavorBridges.PushFlavor(Settings.Flavor);
-				Output(FlavorBridges.Describe());
+				SetFlavor(_params);
 				return;
 
 			case "dmg":
@@ -70,7 +67,7 @@ namespace DoorSlammer
 
 			default:
 				Output("Unknown option '" + _params[0]
-					+ "'. Try: ds [on|off|sound|rage|flavor|dmg|floor|tuning|info|reset]");
+					+ "'. Try: ds [on|off|sound|rage|flavor {mod}|dmg|floor|tuning|info|reset]");
 				return;
 			}
 		}
@@ -82,7 +79,7 @@ namespace DoorSlammer
 			Line("ds dmg {z} {d}", DamageLine());
 			Switch("ds sound", SoundChoices(), "play a material-relevant sound on slam");
 			Switch("ds rage", RageChoices(), "suppress UL's chance to rage from slam damage");
-			Switch("ds flavor", FlavorChoices(), FlavorBridges.FlavorSummary);
+			FlavorLines();
 			Line("ds floor {hp}", FloorLine());
 			Line("ds tuning {cd} {dist}", TuningLine());
 		}
@@ -113,9 +110,9 @@ namespace DoorSlammer
 			Line("Undead Legacy", UndeadLegacyInfo.Status);
 			Line("door-close hook", Patches.DoorCloseHookStatus);
 			Line("rage roll patch", Patches.RageSuppressionStatus);
-			for (int i = 0; i < FlavorBridges.All.Length; i++)
+			for (int i = 0; i < FlavorPartners.All.Length; i++)
 			{
-				Line(FlavorBridges.All[i].Label, FlavorBridges.All[i].Status);
+				Line(FlavorPartners.All[i].Label, FlavorPartners.All[i].Status);
 			}
 			Line("last slam sound", SlamSound.LastPlayed);
 			Line("door closes checked", Counters.ClosesChecked
@@ -125,9 +122,9 @@ namespace DoorSlammer
 			Line("doors", Counters.DoorsDamaged + " damaged, "
 				+ Counters.DoorsSpared + " spared");
 			Line("rage rolls suppressed", Counters.RageSuppressed.ToString());
-			for (int i = 0; i < FlavorBridges.All.Length; i++)
+			for (int i = 0; i < FlavorPartners.All.Length; i++)
 			{
-				Line("via " + FlavorBridges.All[i].Label, FlavorBridges.All[i].Procs + " slams acted on");
+				Line("via " + FlavorPartners.All[i].Label, FlavorPartners.All[i].Procs + " slams acted on");
 			}
 
 			if (Counters.ClosesChecked == 0)
@@ -185,6 +182,67 @@ namespace DoorSlammer
 			Settings.MinRemainingHp = floor;
 			Config.Save();
 			Output("Health floor: " + FloorLine());
+		}
+
+		/// <summary>
+		/// 'ds flavor' alone is a read. 'ds flavor {mod}' toggles that pair and mirrors it to that
+		/// mod only; 'ds flavor on|off' sets and mirrors every pair.
+		/// </summary>
+		private static void SetFlavor(List<string> _params)
+		{
+			if (_params.Count < 2)
+			{
+				FlavorLines();
+				return;
+			}
+
+			string arg = _params[1].ToLowerInvariant();
+			if (arg == "on" || arg == "off")
+			{
+				bool on = arg == "on";
+				FlavorSwitches.SetAll(on);
+				Config.Save();
+				FlavorPartners.PushAll(on);
+				Output("Flavor " + OnOff(on) + " for every partner: "
+					+ string.Join(", ", FlavorSwitches.Labels.ToArray()) + ".");
+				return;
+			}
+
+			string label = FlavorSwitches.Resolve(_params[1]);
+			if (label == null)
+			{
+				Output("'" + _params[1] + "' is not a partner this mod knows. Try: ds flavor ["
+					+ string.Join("|", Aliases()) + "|on|off]");
+				return;
+			}
+
+			bool now = !FlavorSwitches.IsOn(label);
+			FlavorSwitches.Set(label, now);
+			Config.Save();
+			FlavorPartners.Push(label, now);
+			Output(FlavorPartners.Describe(label));
+		}
+
+		/// <summary>One menu line per partner, known ones first.</summary>
+		private static void FlavorLines()
+		{
+			foreach (string label in FlavorSwitches.Labels)
+			{
+				bool on = FlavorSwitches.IsOn(label);
+				Switch("ds flavor " + FlavorPartners.AliasOf(label),
+					Choices(Mark("on", on), Mark("off", !on)), FlavorPartners.MenuNote(label));
+			}
+		}
+
+		private static string[] Aliases()
+		{
+			List<string> labels = FlavorSwitches.Labels;
+			string[] aliases = new string[labels.Count];
+			for (int i = 0; i < labels.Count; i++)
+			{
+				aliases[i] = FlavorPartners.AliasOf(labels[i]);
+			}
+			return aliases;
 		}
 
 		private static void SetTuning(List<string> _params)
@@ -257,11 +315,6 @@ namespace DoorSlammer
 			return Choices(Mark("off", !Settings.SuppressRage), Mark("on", Settings.SuppressRage));
 		}
 
-		private static string FlavorChoices()
-		{
-			return Choices(Mark("on", Settings.Flavor), Mark("off", !Settings.Flavor));
-		}
-
 		private static string DamageLine()
 		{
 			return Settings.DamageToZombie + " to zombie / " + Settings.DamageToDoor + " to door";
@@ -296,8 +349,8 @@ namespace DoorSlammer
 
 		public override string getHelp()
 		{
-			return "Usage: ds [on|off|sound|rage|flavor|dmg {z} {d}|floor {hp}|tuning {cd} {dist}"
-				+ "|info|reset]"
+			return "Usage: ds [on|off|sound|rage|flavor {mod}|flavor on|off|dmg {z} {d}|floor {hp}"
+				+ "|tuning {cd} {dist}|info|reset]"
 				+ "\r\n\r\nClosing a door on a zombie takes a little health off "
 				+ "both the zombie and the door. It catches at most one zombie - the nearest one "
 				+ "standing in the doorway - and deliberately does nothing else: no knockdown, no "
@@ -331,15 +384,23 @@ namespace DoorSlammer
 				+ "a door open. It holds at any 'ds dmg': a 100 HP slam on a zombie with 50 left "
 				+ "takes 40 and leaves it standing on the floor. 0 removes the protection entirely, "
 				+ "and is the only setting at which a slam itself can kill.\r\n\r\n"
-				+ "'ds flavor' toggles the extra behaviour supported mods offer, on by default. It "
-				+ "does nothing unless one of them is installed. Currently that is FletchWounds and "
-				+ "Stumblr. FletchWounds: a slam that catches a zombie with one of your arrows still "
-				+ "in it drives that arrow deeper, once per slam however many are in it. That is "
-				+ "FletchWounds' arrow rather than the door's damage, so unlike a slam it is credited "
-				+ "to you and can land a killing blow. Stumblr: a slam that catches a zombie can "
-				+ "trip it, in one of the game's own stumble animations; 'sb door' sets the chance. "
-				+ "Every linked mod carries this switch and toggling it in any one of them moves all "
-				+ "of them."
+				+ "'ds flavor' lists the extra behaviour supported mods offer, one switch per mod, "
+				+ "all on by default, and changes nothing. 'ds flavor {mod}' toggles one of them, "
+				+ "by the other mod's command name - 'ds flavor fw', 'ds flavor sb' - and 'ds "
+				+ "flavor on' or 'ds flavor off' sets them all. A switch does nothing unless that "
+				+ "mod is installed. Currently: FletchWounds, where a slam that catches a zombie "
+				+ "with one of your arrows still in it drives that arrow deeper, once per slam "
+				+ "however many are in it. That is FletchWounds' arrow rather than the door's "
+				+ "damage, so unlike a slam it is credited to you and can land a killing blow. "
+				+ "WhackLash, where a slam that catches a zombie you have been hitting - one with its "
+				+ "focus meter up - can knock it down; 'wl door' sets the chance. And "
+				+ "Stumblr, where a slam that catches a zombie can trip it, in one of the game's own "
+				+ "stumble animations; 'sb door' sets the chance. Each pair of mods is switched on "
+				+ "both sides, and toggling it in either one sets both, so 'ds flavor fw' and 'fw "
+				+ "flavor ds' are the same switch. Other pairs - FletchWounds with CrawlerGuts, say "
+				+ "- are not touched, so any combination of interactions can be on at once. A mod "
+				+ "this build does not know about is let through until you switch it off; it gets "
+				+ "a line of its own here once it has been seen."
 				+ "\r\n\r\n"
 				+ "'ds tuning {cd} {dist}' sets the seconds between "
 				+ "two damaging slams of the same door, and how far past the frame a zombie still "

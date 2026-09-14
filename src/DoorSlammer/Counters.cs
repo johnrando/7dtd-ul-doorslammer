@@ -34,7 +34,7 @@ namespace DoorSlammer
 			DoorsDamaged = 0;
 			DoorsSpared = 0;
 			RageSuppressed = 0;
-			FlavorBridges.ResetCounters();
+			FlavorPartners.ResetCounters();
 		}
 	}
 }

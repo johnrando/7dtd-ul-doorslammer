@@ -30,7 +30,9 @@ DoorSlammer is ON
   ds dmg {z} {d}        : 10 to zombie / 10 to door
   ds sound              : [ off | impact | >break< ] - play a material-relevant sound on slam
   ds rage               : [ >off< | on ]             - suppress UL's chance to rage from slam damage
-  ds flavor             : [ >on< | off ]             - enhanced mod interaction with FletchWounds, Stumblr
+  ds flavor fw          : [ >on< | off ]             - FletchWounds: a slam drives your arrows deeper
+  ds flavor wl          : [ >on< | off ]             - WhackLash: a slam can floor a zombie you have been working on
+  ds flavor sb          : [ >on< | off ]             - Stumblr: a slam can trip the zombie
   ds floor {hp}         : enemies below 20 health will not be affected by slam damage
   ds tuning {cd} {dist} : 1 sec cooldown / 0.35 range
 ```
@@ -43,13 +45,21 @@ toggling, so the command reads the same whichever state you were in and repeatin
 called with no arguments prints its usage and current value. **Changes are saved** — see
 [Settings file](#settings-file).
 
-`ds flavor` switches on the extra behaviour supported mods offer, and names whichever it found.
-Right now that is **FletchWounds** and **Stumblr**. FletchWounds: catch a zombie that still has one
-of your arrows in it and the door drives that arrow deeper. Stumblr: a zombie caught in the door
-can go down in one of the game's own stumble animations, with a chance set by `sb door`. Each
-effect is the other mod's doing rather than the door's, so what it costs is documented there.
-Every linked mod carries the switch and **toggling it in any one of them moves all of them**, so
-you only ever have to set it in one place.
+`ds flavor` lists the extra behaviour supported mods offer, one switch per mod, and changes
+nothing. `ds flavor fw`, `ds flavor wl` or `ds flavor sb` toggles one of them, by the other mod's
+command name; `ds flavor on` and `ds flavor off` set them all. Right now that is **FletchWounds**,
+**WhackLash** and **Stumblr**. FletchWounds: catch a zombie that still has one of your arrows in it
+and the door drives that arrow deeper. WhackLash: a zombie you have been hitting, with its focus
+meter up, can be knocked down by the door, with a chance per meter point set by `wl door`. Stumblr:
+a zombie caught in the door can go down in one of the game's own stumble animations, with a chance
+set by `sb door`. Each effect is the other mod's doing rather than the door's, so what it costs is
+documented there.
+
+Every pair of mods is switched **on both sides**, and toggling it in either one sets both: `ds
+flavor fw` and `fw flavor ds` are the same switch. Other pairs are left alone, so FletchWounds'
+interaction with CrawlerGuts, say, can stay on while its interaction with the door is off. A mod
+this build does not know about is let through until you switch it off, and gets a line of its own
+once it has been seen.
 
 Two more: `ds info` prints the same block with the patch state and counters added, and `ds reset`
 zeroes those counters.
@@ -117,15 +127,17 @@ read or write worked.
 It is plain `key = value` text, one line per setting, each naming the command that sets it:
 
 ```
-enabled       = on       # ds on|off
-damage.zombie = 10       # ds dmg {z} {d}
-damage.door   = 10       # ds dmg {z} {d}
-sound         = break    # ds sound - off, impact or break
-rage          = off      # ds rage
-flavor        = on       # ds flavor
-floor         = 20       # ds floor {hp}
-cooldown      = 1        # ds tuning {cd} {dist}
-range         = 0.35     # ds tuning {cd} {dist}
+enabled             = on       # ds on|off
+damage.zombie       = 10       # ds dmg {z} {d}
+damage.door         = 10       # ds dmg {z} {d}
+sound               = break    # ds sound - off, impact or break
+rage                = off      # ds rage
+flavor.fletchwounds = on       # ds flavor fw
+flavor.whacklash    = on       # ds flavor wl
+flavor.stumblr      = on       # ds flavor sb
+floor               = 20       # ds floor {hp}
+cooldown            = 1        # ds tuning {cd} {dist}
+range               = 0.35     # ds tuning {cd} {dist}
 ```
 
 Edit it by hand with the game closed — it is rewritten whenever a `ds` command changes something.
@@ -174,7 +186,7 @@ That restages `dist/DoorSlammer/`, ready to copy into `Mods/`. To also build the
 dotnet build src/DoorSlammer/DoorSlammer.csproj -c Release -t:Package
 ```
 
-That writes `release/DoorSlammer-<version>-<date>.zip`, taking the version from `ModInfo.xml`.
+That writes `release/DoorSlammer-v<version>-<date>.zip`, taking the version from `ModInfo.xml`.
 Neither `dist/` nor `release/` is tracked — the zip is published as a GitHub Release instead.
 
 ## License

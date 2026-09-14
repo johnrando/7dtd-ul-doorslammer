@@ -1,23 +1,23 @@
 namespace DoorSlammer
 {
 	/// <summary>
-	/// PUBLISHED CONTRACT. FletchWounds and Stumblr bind <see cref="SetFlavor"/> by reflection, the
-	/// way <see cref="FlavorBridge"/> binds their <c>TryProc</c>, so this signature is the whole
-	/// interface. Changing it does not break the build; it silently unlinks the switches.
+	/// PUBLISHED CONTRACT. Partner mods bind <see cref="SetFlavor"/> by reflection, the way
+	/// <see cref="FlavorPartner"/> binds theirs, so this signature is the whole interface. Changing
+	/// it does not break the build; it silently unlinks the switches. Game types and strings only.
 	/// </summary>
 	public static class FlavorInterop
 	{
 		/// <summary>
-		/// Called when the player toggles flavor in another mod. This mod is the hub, so the value
-		/// is saved here and pushed on to every bridged mod, the caller included - which is harmless,
-		/// because a receiver only sets and saves and never pushes back. That is what lets the
-		/// player set the switch in any one mod and have all of them follow, without a loop.
+		/// Called when the player toggles their flavor switch for this mod in another mod. Sets
+		/// this side's switch for that partner and saves. Deliberately does not push anywhere:
+		/// whoever the player typed at owns the mirror, which is what stops two mods calling each
+		/// other forever.
 		/// </summary>
-		public static void SetFlavor(bool _on)
+		/// <param name="_partner">The calling mod's label, e.g. "FletchWounds".</param>
+		public static void SetFlavor(string _partner, bool _on)
 		{
-			Settings.Flavor = _on;
+			FlavorSwitches.Set(_partner, _on);
 			Config.Save();
-			FlavorBridges.PushFlavor(_on);
 		}
 	}
 }
