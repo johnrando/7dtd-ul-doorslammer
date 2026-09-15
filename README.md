@@ -147,7 +147,7 @@ back the defaults above (which live in `Settings.cs`).
 ## Undead Legacy
 
 **Not required** — the mod works fine on a plain install, and is built to sit alongside UL without
-modifying anything of UL's. Tested against **UL 2.7.32**; all of UL's ordinary doors are covered.
+modifying anything of UL's. Tested against **UL 2.7.33**; all of UL's ordinary doors are covered.
 
 **`ds rage`.** UL rolls a chance to enrage a zombie on every bit of damage it takes, however small
 — only around 0.63% per slam at UL's default, but across the many slams it takes to whittle one
