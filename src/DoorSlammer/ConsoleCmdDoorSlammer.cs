@@ -26,6 +26,10 @@ namespace DoorSlammer
 				SetEnabled(command == "on");
 				return;
 
+			case "mode":
+				SetMode(_params);
+				return;
+
 			case "sound":
 				SlamSound.Cycle();
 				Config.Save();
@@ -67,7 +71,7 @@ namespace DoorSlammer
 
 			default:
 				Output("Unknown option '" + _params[0]
-					+ "'. Try: ds [on|off|sound|rage|flavor {mod}|dmg|floor|tuning|info|reset]");
+					+ "'. Try: ds [on|off|mode|dmg|sound|rage|flavor {mod}|floor|tuning|info|reset]");
 				return;
 			}
 		}
@@ -76,6 +80,7 @@ namespace DoorSlammer
 		{
 			Output(_header);
 			Switch("ds on|off", EnabledChoices(), "damage a zombie caught in a slammed door");
+			Switch("ds mode", ModeChoices(), "read 'ds dmg' as a % of max health, or as flat HP");
 			Line("ds dmg {z} {d}", DamageLine());
 			Switch("ds sound", SoundChoices(), "play a material-relevant sound on slam");
 			Switch("ds rage", RageChoices(), "suppress UL's chance to rage from slam damage");
@@ -146,6 +151,25 @@ namespace DoorSlammer
 			Line(_label, _choices.PadRight(26) + " - " + _note);
 		}
 
+		/// <summary>'ds mode' alone flips flat and percent; 'ds mode flat|percent|pct' says which.</summary>
+		private static void SetMode(List<string> _params)
+		{
+			if (_params.Count == 1)
+			{
+				Settings.Mode = Settings.Mode == DamageMode.Flat ? DamageMode.Percent : DamageMode.Flat;
+			}
+			else if (_params.Count != 2 || !Config.TryMode(_params[1], out Settings.Mode))
+			{
+				Output("Usage: ds mode [percent|pct|flat] - currently: " + ModeChoices());
+				return;
+			}
+
+			Config.Save();
+			Output("Damage mode " + Config.ModeName(Settings.Mode).ToUpperInvariant()
+				+ " - slam damage: " + DamageLine());
+		}
+
+		/// <summary>Sets the pair the active mode reads; the other pair is left as it was.</summary>
 		private static void SetDamage(List<string> _params)
 		{
 			if (_params.Count != 3)
@@ -154,14 +178,27 @@ namespace DoorSlammer
 				return;
 			}
 
-			if (!TryCount(_params[1], "zombie damage", out int zombie)
-				|| !TryCount(_params[2], "door damage", out int door))
+			if (Settings.Mode == DamageMode.Percent)
 			{
-				return;
+				if (!TryPercent(_params[1], "zombie damage", out float zombiePct)
+					|| !TryPercent(_params[2], "door damage", out float doorPct))
+				{
+					return;
+				}
+				Settings.PercentToZombie = zombiePct;
+				Settings.PercentToDoor = doorPct;
+			}
+			else
+			{
+				if (!TryCount(_params[1], "zombie damage", out int zombie)
+					|| !TryCount(_params[2], "door damage", out int door))
+				{
+					return;
+				}
+				Settings.DamageToZombie = zombie;
+				Settings.DamageToDoor = door;
 			}
 
-			Settings.DamageToZombie = zombie;
-			Settings.DamageToDoor = door;
 			Config.Save();
 			Output("Slam damage: " + DamageLine());
 		}
@@ -286,6 +323,16 @@ namespace DoorSlammer
 			return false;
 		}
 
+		private static bool TryPercent(string _value, string _what, out float _parsed)
+		{
+			if (Config.TryPercent(_value, out _parsed))
+			{
+				return true;
+			}
+			Output("'" + _value + "' is not a valid " + _what + " - percentages from 0 to 100, like 2.5.");
+			return false;
+		}
+
 		/// <summary>The choice list for a cycle or toggle, with the live value marked.</summary>
 		private static string Choices(params string[] _options)
 		{
@@ -315,9 +362,23 @@ namespace DoorSlammer
 			return Choices(Mark("off", !Settings.SuppressRage), Mark("on", Settings.SuppressRage));
 		}
 
+		private static string ModeChoices()
+		{
+			return Choices(
+				Mark("percent", Settings.Mode == DamageMode.Percent),
+				Mark("flat", Settings.Mode == DamageMode.Flat));
+		}
+
+		/// <summary>The active pair, then the idle one in brackets so switching mode is no surprise.</summary>
 		private static string DamageLine()
 		{
-			return Settings.DamageToZombie + " to zombie / " + Settings.DamageToDoor + " to door";
+			string zombiePct = Config.Percent(Settings.PercentToZombie);
+			string doorPct = Config.Percent(Settings.PercentToDoor);
+			return Settings.Mode == DamageMode.Percent
+				? zombiePct + " to zombie / " + doorPct + " to door (flat: "
+					+ Settings.DamageToZombie + " / " + Settings.DamageToDoor + ")"
+				: Settings.DamageToZombie + " to zombie / " + Settings.DamageToDoor
+					+ " to door (percent: " + zombiePct + " / " + doorPct + ")";
 		}
 
 		private static string FloorLine()
@@ -349,8 +410,8 @@ namespace DoorSlammer
 
 		public override string getHelp()
 		{
-			return "Usage: ds [on|off|sound|rage|flavor {mod}|flavor on|off|dmg {z} {d}|floor {hp}"
-				+ "|tuning {cd} {dist}|info|reset]"
+			return "Usage: ds [on|off|mode|mode flat|percent|dmg {z} {d}|sound|rage|flavor {mod}"
+				+ "|flavor on|off|floor {hp}|tuning {cd} {dist}|info|reset]"
 				+ "\r\n\r\nClosing a door on a zombie takes a little health off "
 				+ "both the zombie and the door. It catches at most one zombie - the nearest one "
 				+ "standing in the doorway - and deliberately does nothing else: no knockdown, no "
@@ -359,7 +420,7 @@ namespace DoorSlammer
 				+ "is capped to whatever health the target has above the never-kill floor, so a "
 				+ "target at or below the floor is left alone and one above it lands exactly on the "
 				+ "floor rather than through it. Slamming therefore whittles a zombie down and then "
-				+ "stops, and wears a door down without breaking it open, at any 'ds dmg'."
+				+ "stops, and wears a door down without breaking it open, at any 'ds dmg' in either mode."
 				+ "\r\n\r\n'ds' on "
 				+ "its own prints the settings and changes nothing - it is the status read, so it is "
 				+ "safe to type when you only want to look. Each line names the command that changes "
@@ -377,11 +438,19 @@ namespace DoorSlammer
 				+ "suppression of the rage roll on slam damage. Undead Legacy rolls for rage on every "
 				+ "damage response no matter how small, so over the many slams it takes to whittle a "
 				+ "zombie the odds add up. Off by default. Without Undead Legacy installed this "
-				+ "suppresses vanilla's own rage roll instead.\r\n\r\n'ds dmg {z} {d}' sets the HP a "
-				+ "slam takes off the zombie and off the door: 10 and 10 by default.\r\n\r\n'ds floor "
+				+ "suppresses vanilla's own rage roll instead.\r\n\r\n'ds mode' switches how 'ds dmg' "
+				+ "is read. Percent, the default: each number is a percentage of that target's max "
+				+ "health, so a slam takes the same fraction off a 50 HP stall door as off a 21,000 HP "
+				+ "vault hatch, rounded to the nearest whole HP and never rounded down to nothing. "
+				+ "Flat: each number is whole HP, the same on every door. 'ds mode' alone flips "
+				+ "between them; 'ds mode flat' or 'ds mode percent' says which. Both pairs are kept, "
+				+ "so switching back finds the other pair as you left it.\r\n\r\n'ds dmg {z} {d}' sets "
+				+ "the pair the current mode reads, zombie first: 5 and 5 percent by default, or 10 "
+				+ "and 10 HP in flat mode. Percentages run from 0 to 100 and take decimals, like 2.5."
+				+ "\r\n\r\n'ds floor "
 				+ "{hp}' sets the never-kill floor, 20 by default. A slam takes at most the health "
 				+ "the target has above it, which is what stops a slam killing a zombie or breaking "
-				+ "a door open. It holds at any 'ds dmg': a 100 HP slam on a zombie with 50 left "
+				+ "a door open. It holds at any 'ds dmg' in either mode: a 100 HP slam on a zombie with 50 left "
 				+ "takes 40 and leaves it standing on the floor. 0 removes the protection entirely, "
 				+ "and is the only setting at which a slam itself can kill.\r\n\r\n"
 				+ "'ds flavor' lists the extra behaviour supported mods offer, one switch per mod, "

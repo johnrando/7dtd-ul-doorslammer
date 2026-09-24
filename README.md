@@ -1,7 +1,7 @@
 # DoorSlammer
 
 A 7 Days To Die mod. Closing a door on a zombie takes health off **both the zombie and the door**
-— 10 HP off the zombie, 10 HP off the door by default.
+— 5% of the zombie's max health and 5% of the door's by default, or a flat HP amount if you prefer.
 
 It puts a small price on a very safe tactic: trap a zombie behind a door, open it, land a hit,
 slam it shut, repeat. Now the slam itself does a little work, and costs you a little door.
@@ -27,7 +27,8 @@ that changes it and says what it is for, so the menu is also the reference:
 ```
 DoorSlammer is ON
   ds on|off             : [ >on< | off ]             - damage a zombie caught in a slammed door
-  ds dmg {z} {d}        : 10 to zombie / 10 to door
+  ds mode               : [ >percent< | flat ]       - read 'ds dmg' as a % of max health, or as flat HP
+  ds dmg {z} {d}        : 5% to zombie / 5% to door (flat: 10 / 10)
   ds sound              : [ off | impact | >break< ] - play a material-relevant sound on slam
   ds rage               : [ >off< | on ]             - suppress UL's chance to rage from slam damage
   ds flavor fw          : [ >on< | off ]             - FletchWounds: a slam drives your arrows deeper
@@ -40,6 +41,14 @@ DoorSlammer is ON
 `ds on` and `ds off` are the master switch — with it off the door-close hook returns immediately, so
 a slam does nothing and every other setting is inert. They say which state you want rather than
 toggling, so the command reads the same whichever state you were in and repeating it is harmless.
+
+`ds mode` picks how `ds dmg` is read. **Percent**, the default: each number is a percentage of that
+target's max health, so a slam takes the same fraction off a 50 HP stall door as off a 21,000 HP
+vault hatch, rounded to the nearest whole HP and never rounded down to nothing. **Flat**: each
+number is whole HP, the same on every door. `ds mode` alone flips between them; `ds mode flat`,
+`ds mode percent` or `ds mode pct` says which. `ds dmg {z} {d}` then sets the pair the current mode
+reads, zombie first — percentages run from 0 to 100 and take decimals, like `2.5`. Both pairs are
+remembered, so switching back finds the other pair as you left it.
 
 `ds tuning` takes the per-door cooldown in seconds and the reach past the frame in metres. A setter
 called with no arguments prints its usage and current value. **Changes are saved** — see
@@ -72,8 +81,8 @@ zeroes those counters.
 - **Cannot land a killing blow.** Each hit is capped to whatever health the target has above the
   never-kill floor, so a target at or below the floor is left alone and one above it lands exactly
   on the floor rather than through it. Slamming whittles a zombie down and then stops, and wears a
-  door down without breaking it open — at any `ds dmg`, including one far larger than the floor.
-  Only `ds floor 0` removes that.
+  door down without breaking it open — at any `ds dmg`, in either mode, including one far larger
+  than the floor. Only `ds floor 0` removes that.
 - Costs nothing when no zombie is caught, so ordinary door use around your base is free.
 
 ## Sound
@@ -103,8 +112,9 @@ what a first run starts from:
 | Setting | Default |
 |---|---|
 | slam sound | break |
-| damage to the zombie | 10 HP |
-| damage to the door | 10 HP |
+| damage mode | percent |
+| damage to the zombie | 5% of max health (10 HP in flat mode) |
+| damage to the door | 5% of max health (10 HP in flat mode) |
 | never-kill floor | 20 HP remaining |
 | cooldown per door | 1 s |
 | reach past the door frame | 0.35 m |
@@ -128,8 +138,11 @@ It is plain `key = value` text, one line per setting, each naming the command th
 
 ```
 enabled             = on       # ds on|off
-damage.zombie       = 10       # ds dmg {z} {d}
-damage.door         = 10       # ds dmg {z} {d}
+damage.mode         = percent  # ds mode - percent or flat
+damage.zombie       = 10       # ds dmg {z} {d} in flat mode
+damage.door         = 10       # ds dmg {z} {d} in flat mode
+damage.zombie.pct   = 5        # ds dmg {z} {d} in percent mode
+damage.door.pct     = 5        # ds dmg {z} {d} in percent mode
 sound               = break    # ds sound - off, impact or break
 rage                = off      # ds rage
 flavor.fletchwounds = on       # ds flavor fw
@@ -142,7 +155,9 @@ range               = 0.35     # ds tuning {cd} {dist}
 
 Edit it by hand with the game closed — it is rewritten whenever a `ds` command changes something.
 A line that will not parse is logged and ignored rather than fatal, and deleting the file brings
-back the defaults above (which live in `Settings.cs`).
+back the defaults above (which live in `Settings.cs`). A file from an older build has no
+`damage.mode` line, so it comes up in percent mode; its `damage.zombie` and `damage.door` values
+are kept as the flat pair, and `ds mode flat` brings them back into play.
 
 ## Undead Legacy
 
@@ -163,7 +178,9 @@ parent block.
 **Powered doors are not covered** — powered vault doors, garage doors and the like.
 
 **UL door HP varies enormously** — a bathroom stall is 50, a standard wooden door 250, a vault
-hatch 21,000 — so a fixed 10 HP per slam means very different things depending on the door.
+hatch 21,000 — so a fixed HP per slam means very different things depending on the door. That is
+why percent mode is the default: 5% is 3 HP off a stall and 1,050 off a hatch. `ds mode flat` gets
+the fixed-HP behaviour back.
 
 ## Limitations
 

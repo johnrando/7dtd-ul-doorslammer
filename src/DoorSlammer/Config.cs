@@ -136,8 +136,11 @@ namespace DoorSlammer
 			text.AppendLine("# ignored rather than fatal.");
 			text.AppendLine();
 			Setting(text, "enabled", OnOff(Settings.Enabled), "ds on|off");
-			Setting(text, "damage.zombie", Settings.DamageToZombie.ToString(), "ds dmg {z} {d}");
-			Setting(text, "damage.door", Settings.DamageToDoor.ToString(), "ds dmg {z} {d}");
+			Setting(text, "damage.mode", ModeName(Settings.Mode), "ds mode - percent or flat");
+			Setting(text, "damage.zombie", Settings.DamageToZombie.ToString(), "ds dmg {z} {d} in flat mode");
+			Setting(text, "damage.door", Settings.DamageToDoor.ToString(), "ds dmg {z} {d} in flat mode");
+			Setting(text, "damage.zombie.pct", Number(Settings.PercentToZombie), "ds dmg {z} {d} in percent mode");
+			Setting(text, "damage.door.pct", Number(Settings.PercentToDoor), "ds dmg {z} {d} in percent mode");
 			Setting(text, "sound", Settings.SoundMode.ToString().ToLowerInvariant(),
 				"ds sound - off, impact or break");
 			Setting(text, "rage", OnOff(Settings.SuppressRage), "ds rage");
@@ -207,10 +210,16 @@ namespace DoorSlammer
 			{
 			case "enabled":
 				return TryBool(_value, ref Settings.Enabled);
+			case "damage.mode":
+				return TryMode(_value, out Settings.Mode);
 			case "damage.zombie":
 				return LoadCount(_value, ref Settings.DamageToZombie);
 			case "damage.door":
 				return LoadCount(_value, ref Settings.DamageToDoor);
+			case "damage.zombie.pct":
+				return LoadPercent(_value, ref Settings.PercentToZombie);
+			case "damage.door.pct":
+				return LoadPercent(_value, ref Settings.PercentToDoor);
 			case "sound":
 				return TrySound(_value);
 			case "rage":
@@ -311,6 +320,47 @@ namespace DoorSlammer
 			return true;
 		}
 
+		/// <summary>A percentage as typed, 0 to 100. Shared with the console command.</summary>
+		internal static bool TryPercent(string _value, out float _parsed)
+		{
+			return TryMeasure(_value, out _parsed) && _parsed <= 100f;
+		}
+
+		private static bool LoadPercent(string _value, ref float _target)
+		{
+			if (!TryPercent(_value, out float parsed))
+			{
+				return false;
+			}
+			_target = parsed;
+			return true;
+		}
+
+		/// <summary>What the file writes plus the console shorthand. Shared with the console
+		/// command. A bad value leaves the target untouched.</summary>
+		internal static bool TryMode(string _value, out DamageMode _target)
+		{
+			switch (_value.ToLowerInvariant())
+			{
+			case "flat":
+				_target = DamageMode.Flat;
+				return true;
+			case "percent":
+			case "pct":
+				_target = DamageMode.Percent;
+				return true;
+			default:
+				_target = Settings.Mode;
+				return false;
+			}
+		}
+
+		/// <summary>Written the way it is parsed, for the file and the menu.</summary>
+		internal static string ModeName(DamageMode _mode)
+		{
+			return _mode == DamageMode.Flat ? "flat" : "percent";
+		}
+
 		private static bool TrySound(string _value)
 		{
 			switch (_value.ToLowerInvariant())
@@ -338,6 +388,13 @@ namespace DoorSlammer
 		internal static string Number(float _value)
 		{
 			return _value.ToString(CultureInfo.InvariantCulture);
+		}
+
+		/// <summary>A percentage for the console: 5 prints as 5%, 2.5 as 2.5%. The file writes
+		/// <see cref="Number"/> instead, without the sign, so it can be typed back in.</summary>
+		internal static string Percent(float _value)
+		{
+			return _value.ToString("0.###", CultureInfo.InvariantCulture) + "%";
 		}
 	}
 }

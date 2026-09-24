@@ -113,8 +113,8 @@ namespace DoorSlammer
 		private static void DamageZombie(EntityAlive _zombie, Vector3i _parentPos)
 		{
 			// The never-kill floor is a cap on the hit, not a gate in front of it: the zombie lands
-			// on the floor rather than through it at any 'ds dmg', and the next slam finds nothing
-			// left to take.
+			// on the floor rather than through it at any 'ds dmg' in either mode, and the next slam
+			// finds nothing left to take.
 			int headroom = _zombie.Health - Settings.MinRemainingHp;
 			if (headroom <= 0)
 			{
@@ -134,7 +134,9 @@ namespace DoorSlammer
 			//
 			// Deliberately no SetIgnoreConsecutiveDamages: its throttle is keyed on EnumDamageSource
 			// alone and would collide with unrelated damage. The per-door cooldown does that job.
-			int applied = _zombie.DamageEntity(damageSource, Math.Min(Settings.DamageToZombie, headroom),
+			int amount = SlamDamage(Settings.DamageToZombie, Settings.PercentToZombie,
+				_zombie.GetMaxHealth());
+			int applied = _zombie.DamageEntity(damageSource, Math.Min(amount, headroom),
 				_criticalHit: false, _impulseScale: 0f);
 
 			// -1 means rejected outright rather than merely absorbed.
@@ -177,14 +179,36 @@ namespace DoorSlammer
 			// _entityIdThatDamaged -1 keeps the hit unattributed, which also suppresses UL's floating
 			// damage number. Block.OnBlockDamaged handles the multiblock child-to-parent redirect
 			// and replicates the new damage value itself.
-			block.DamageBlock(_world, _clrIdx, _parentPos, blockValue,
-				Math.Min(Settings.DamageToDoor, headroom),
+			int amount = SlamDamage(Settings.DamageToDoor, Settings.PercentToDoor, block.MaxDamage);
+			block.DamageBlock(_world, _clrIdx, _parentPos, blockValue, Math.Min(amount, headroom),
 				_entityIdThatDamaged: -1, _attackHitInfo: null, _bUseHarvestTool: false,
 				_bBypassMaxDamage: false);
 			Counters.DoorsDamaged++;
 
 			// Only once the door has really taken HP, so a spared slam stays silent.
 			SlamSound.Play(_parentPos, block);
+		}
+
+		/// <summary>
+		/// The HP one slam asks for, before the floor caps it: the flat number, or that percent of
+		/// the target's max HP rounded to the nearest whole point and never rounded down to nothing.
+		/// </summary>
+		/// <param name="_percent">As typed: 5 means 5%.</param>
+		internal static int SlamDamage(int _flat, float _percent, int _maxHp)
+		{
+			if (Settings.Mode == DamageMode.Flat)
+			{
+				return _flat;
+			}
+			if (_percent <= 0f || _maxHp <= 0)
+			{
+				return 0;
+			}
+
+			// AwayFromZero: Math.Round's default is banker's rounding, which would send 12.5 to 12.
+			// The percent is capped at 100 on the way in, so this cannot overflow.
+			double rounded = Math.Round(_maxHp * (double)_percent / 100d, MidpointRounding.AwayFromZero);
+			return Math.Max(1, (int)rounded);
 		}
 	}
 }
