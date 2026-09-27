@@ -8,7 +8,7 @@ slam it shut, repeat. Now the slam itself does a little work, and costs you a li
 
 ## Installing
 
-Download the zip from [Releases](https://github.com/johnrando/ul-doorslammer/releases) and extract
+Download the zip from [Releases](https://github.com/johnrando/7dtd-ul-doorslammer/releases) and extract
 it into the game's `Mods/`. The mod folder is the root of the archive, so it lands as:
 
 ```
